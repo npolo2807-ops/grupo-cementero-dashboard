@@ -747,6 +747,44 @@ fetch('datos.json')
       if (el('gauge-center-pct')) el('gauge-center-pct').textContent = pct2 + '%';
     }
 
+    // Rebuild Flota de Vehículos por Zona table
+    const fbody = document.getElementById('tbodyFlota');
+    if (fbody && d.unitLabels && d.unitLabels.length) {
+      const sorted3 = d.unitLabels.map((lbl,i) => ({lbl, done: d.unitDone[i]||0, delay: d.unitDelay[i]||0}))
+        .sort((a,b) => b.done - a.done);
+      fbody.innerHTML = sorted3.map((u,i) => {
+        const tot = u.done + u.delay;
+        const pct = tot > 0 ? Math.round(u.done/tot*100) : 0;
+        const col = pct>=90?'#2E7D32':pct>=70?'#F57F17':'#C62828';
+        return '<tr style="background:' + (i%2===0?'#fafafa':'#fff') + '">'
+          + '<td><b>' + u.lbl + '</b></td>'
+          + '<td style="text-align:center;color:#2E7D32;font-weight:bold">' + u.done + '</td>'
+          + '<td style="text-align:center;color:#E65100">' + u.delay + '</td>'
+          + '<td style="text-align:center;font-weight:bold;color:' + col + '">' + tot + '</td>'
+          + '</tr>';
+      }).join('');
+    }
+
+    // Rebuild Detalle por Unidad table (GPS data not available — show task summary)
+    const dbody = document.getElementById('tbodyDetalle');
+    if (dbody && d.unitLabels && d.unitLabels.length) {
+      const sorted4 = d.unitLabels.map((lbl,i) => ({lbl, done: d.unitDone[i]||0, delay: d.unitDelay[i]||0, pct: d.unitPct[i]||0}))
+        .sort((a,b) => b.done - a.done);
+      dbody.innerHTML = sorted4.map((u,i) => {
+        const tot = u.done + u.delay;
+        return '<tr style="background:' + (i%2===0?'#fafafa':'#fff') + '">'
+          + '<td><b>' + u.lbl + '</b>'
+          + '<div style="font-size:11px;color:#888;margin-top:2px">✓ ' + u.done + ' completadas &nbsp;|&nbsp; ⏰ ' + u.delay + ' demoradas &nbsp;|&nbsp; Total: ' + tot + '</div>'
+          + '</td>'
+          + '<td style="text-align:center;color:#888">N/D</td>'
+          + '<td style="text-align:center;color:#888">N/D</td>'
+          + '<td style="text-align:center;color:#888">N/D</td>'
+          + '<td style="text-align:center;color:#888">N/D</td>'
+          + '<td style="text-align:center;color:#888">N/D</td>'
+          + '</tr>';
+      }).join('');
+    }
+
   })
   .catch(() => {}); // silently fail if datos.json no disponible
 
