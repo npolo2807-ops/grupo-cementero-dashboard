@@ -699,20 +699,20 @@ function buildCumplPane() {
     const estado = pct >= 80 ? '🔴 Alto' : pct >= 60 ? '🟡 Moderado' : '🟢 Bajo';
     const barW  = Math.round(pct);
     const ppd   = dias > 0 ? (d.idle_h / dias).toFixed(1) : '—';
-    return \`<tr style="background:\${bg}">
-      <td><b>\${d.label}</b></td>
-      <td><span style="background:\${d.zcolor};color:white;border-radius:4px;padding:2px 8px;font-size:11px">\${d.zone}</span></td>
-      <td style="text-align:center;font-weight:bold;color:\${color}">\${d.idle_h.toFixed(1)}</td>
-      <td style="text-align:center">\${d.trip_h.toFixed(1)}</td>
-      <td style="text-align:center;color:#555">\${ppd}</td>
+    return `<tr style="background:${bg}">
+      <td><b>${d.label}</b></td>
+      <td><span style="background:${d.zcolor};color:white;border-radius:4px;padding:2px 8px;font-size:11px">${d.zone}</span></td>
+      <td style="text-align:center;font-weight:bold;color:${color}">${d.idle_h.toFixed(1)}</td>
+      <td style="text-align:center">${d.trip_h.toFixed(1)}</td>
+      <td style="text-align:center;color:#555">${ppd}</td>
       <td><div style="display:flex;align-items:center;gap:6px">
         <div style="flex:1;background:#eee;border-radius:4px;height:14px;overflow:hidden">
-          <div style="background:\${color};width:\${barW}%;height:100%"></div>
+          <div style="background:${color};width:${barW}%;height:100%"></div>
         </div>
-        <span style="font-weight:bold;color:\${color};min-width:40px">\${pct.toFixed(1)}%</span>
+        <span style="font-weight:bold;color:${color};min-width:40px">${pct.toFixed(1)}%</span>
       </div></td>
-      <td style="text-align:center">\${estado}</td>
-    </tr>\`;
+      <td style="text-align:center">${estado}</td>
+    </tr>`;
   }).join('');
 }
 
