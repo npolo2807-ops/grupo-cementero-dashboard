@@ -670,6 +670,83 @@ fetch('datos.json')
       chClientes.data.datasets[0].backgroundColor = cliLabels.map((_,i)=>`hsl(${10+i*8},70%,45%)`);
       chClientes.update();
     } catch(e) { console.warn('Chart update:', e); }
+
+    // Rebuild unit ranking table (Productividad tab)
+    const trBody = document.getElementById('tbodyUnitsRanking');
+    if (trBody && d.unitLabels && d.unitLabels.length) {
+      const sorted = d.unitLabels.map((lbl,i) => ({lbl, done: d.unitDone[i]||0, delay: d.unitDelay[i]||0, pct: d.unitPct[i]||0, color: d.unitColors[i]||'#9E9E9E'}))
+        .sort((a,b) => b.done - a.done);
+      trBody.innerHTML = sorted.map((u,i) => {
+        const tot = u.done + u.delay;
+        return '<tr style="background:' + (i%2===0?'#fafafa':'#fff') + '">'
+          + '<td style="text-align:center;color:#888">' + (i+1) + '</td>'
+          + '<td><b>' + u.lbl + '</b></td>'
+          + '<td>—</td>'
+          + '<td style="text-align:center;color:#2E7D32;font-weight:bold">' + u.done + '</td>'
+          + '<td style="text-align:center;color:#E65100">' + u.delay + '</td>'
+          + '<td style="text-align:center">' + tot + '</td>'
+          + '<td><div style="display:flex;align-items:center;gap:6px">'
+          + '<div style="flex:1;background:#eee;border-radius:4px;height:12px;overflow:hidden">'
+          + '<div style="background:' + u.color + ';width:' + u.pct + '%;height:100%"></div></div>'
+          + '<span style="color:' + u.color + ';font-weight:bold;min-width:38px">' + u.pct + '%</span>'
+          + '</div></td></tr>';
+      }).join('');
+    }
+
+    // Rebuild zona cumplimiento table
+    const zbody = document.getElementById('tbodyZona');
+    if (zbody && d.zoneNames && d.zoneNames.length) {
+      zbody.innerHTML = d.zoneNames.map((z,i) => {
+        const done = d.zoneDone[i]||0, delay = d.zoneDelay[i]||0;
+        const tot = done + delay; const pct = tot > 0 ? Math.round(done/tot*100) : 0;
+        const col = d.zoneColors[i]||'#9E9E9E';
+        return '<tr>'
+          + '<td><span class="badge" style="background:' + col + ';font-size:13px;padding:4px 12px">' + z + '</span></td>'
+          + '<td style="text-align:center;color:#2E7D32;font-weight:bold">' + done + '</td>'
+          + '<td style="text-align:center;color:#E65100">' + delay + '</td>'
+          + '<td style="text-align:center;color:#546E7A">—</td>'
+          + '<td style="text-align:center">' + tot + '</td>'
+          + '<td><div style="display:flex;align-items:center;gap:6px">'
+          + '<div style="flex:1;background:#eee;border-radius:4px;height:12px;overflow:hidden">'
+          + '<div style="background:' + col + ';width:' + pct + '%;height:100%"></div></div>'
+          + '<span style="font-weight:bold;color:' + col + ';min-width:38px">' + pct + '%</span>'
+          + '</div></td></tr>';
+      }).join('');
+    }
+
+    // Rebuild unit cumplimiento table
+    const ucBody = document.getElementById('tbodyCumplUnit');
+    if (ucBody && d.unitLabels && d.unitLabels.length) {
+      const sorted2 = d.unitLabels.map((lbl,i) => ({lbl, done: d.unitDone[i]||0, delay: d.unitDelay[i]||0, pct: d.unitPct[i]||0, color: d.unitColors[i]||'#9E9E9E'}))
+        .sort((a,b) => b.pct - a.pct);
+      ucBody.innerHTML = sorted2.map((u,i) => {
+        const tot = u.done + u.delay;
+        return '<tr style="background:' + (i%2===0?'#fafafa':'#fff') + '">'
+          + '<td><b>' + u.lbl + '</b></td>'
+          + '<td style="text-align:center;color:#2E7D32;font-weight:bold">' + u.done + '</td>'
+          + '<td style="text-align:center;color:#E65100">' + u.delay + '</td>'
+          + '<td style="text-align:center">' + tot + '</td>'
+          + '<td><div style="display:flex;align-items:center;gap:6px">'
+          + '<div style="flex:1;background:#eee;border-radius:4px;height:12px;overflow:hidden">'
+          + '<div style="background:' + u.color + ';width:' + u.pct + '%;height:100%"></div></div>'
+          + '<span style="font-weight:bold;color:' + u.color + ';min-width:38px">' + u.pct + '%</span>'
+          + '</div></td></tr>';
+      }).join('');
+    }
+
+    // Update cumplimiento KPI cards
+    if (d.kpi) {
+      const unass2 = Math.max(0, (d.kpi.total||0) - (d.kpi.done||0) - (d.kpi.delayed||0));
+      const pct2 = d.kpi.pct || 0;
+      const delayPct2 = d.kpi.total > 0 ? Math.round(d.kpi.delayed/d.kpi.total*100) : 0;
+      const el = id => document.getElementById(id);
+      if (el('cumpl-pct-val'))    el('cumpl-pct-val').textContent    = pct2 + '%';
+      if (el('cumpl-delay-pct'))  el('cumpl-delay-pct').textContent  = delayPct2 + '%';
+      if (el('cumpl-delay-desc')) el('cumpl-delay-desc').textContent = d.kpi.delayed + ' tareas demoradas';
+      if (el('cumpl-unass-val'))  el('cumpl-unass-val').textContent  = unass2;
+      if (el('gauge-center-pct')) el('gauge-center-pct').textContent = pct2 + '%';
+    }
+
   })
   .catch(() => {}); // silently fail if datos.json no disponible
 
