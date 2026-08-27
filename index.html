@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dashboard Grupo Cementero</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f2f5;color:#212121}
+.header{background:linear-gradient(135deg,#1B5E20,#2E7D32,#388E3C);color:white;padding:16px 30px;display:flex;align-items:center;gap:20px;box-shadow:0 4px 12px rgba(0,0,0,.3)}
+.header h1{font-size:24px;font-weight:700}
+.header p{font-size:13px;opacity:.85;margin-top:3px}
+.kpi-strip{display:flex;gap:12px;margin-left:auto;flex-shrink:0}
+.kpi-box{background:rgba(255,255,255,.15);border-radius:10px;padding:10px 18px;text-align:center;min-width:80px}
+.kpi-box .val{font-size:26px;font-weight:800}
+.kpi-box .lbl{font-size:10px;opacity:.8;margin-top:2px}
+.tab-bar{background:white;display:flex;border-bottom:3px solid #C62828;padding:0 20px;box-shadow:0 2px 4px rgba(0,0,0,.08);overflow-x:auto}
+.tab{padding:14px 22px;cursor:pointer;font-size:13px;font-weight:600;color:#555;white-space:nowrap;border-bottom:3px solid transparent;margin-bottom:-3px;transition:all .2s}
+.tab:hover{color:#C62828;background:#fef2f2}
+.tab.active{color:#C62828;border-bottom-color:#C62828}
+.tab-content{display:none;padding:24px;max-width:1400px;margin:0 auto}
+.tab-content.active{display:block}
+.card{background:white;border-radius:12px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,.08);margin-bottom:20px}
+.card h2{font-size:16px;color:#1A237E;margin-bottom:14px;border-bottom:2px solid #C62828;padding-bottom:8px}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.badge{display:inline-block;padding:2px 10px;border-radius:10px;color:white;font-size:11px;font-weight:600}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{background:#1A237E;color:white;padding:10px 12px;text-align:left;font-size:12px}
+tbody tr:nth-child(even){background:#f9f9f9}
+tbody tr:hover{background:#fff3e0}
+tbody td{padding:8px 12px;border-bottom:1px solid #eee;vertical-align:middle}
+.zone-card{background:white;border-radius:10px;padding:16px 20px;box-shadow:0 2px 6px rgba(0,0,0,.07);margin-bottom:12px}
+.progress-bar{background:#eee;border-radius:4px;height:10px;overflow:hidden;margin-bottom:4px}
+#map{height:520px;border-radius:12px;border:2px solid #ddd}
+.legend-bar{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px}
+.leg-item{display:flex;align-items:center;gap:6px;font-size:12px}
+.leg-dot{width:12px;height:12px;border-radius:50%;display:inline-block}
+.kpi-fleet{border-radius:12px;padding:18px 20px;color:white;box-shadow:0 3px 10px rgba(0,0,0,.15)}
+.kf-val{font-size:28px;font-weight:800}
+.kf-lbl{font-size:12px;opacity:.85;margin-top:4px}
+#loading{display:flex;align-items:center;justify-content:center;height:200px;font-size:18px;color:#888}
+</style>
+</head>
+<body>
+<div class="header">
+  <div>
+    <h1>🏗️ Grupo Cementero — Operaciones</h1>
+    <p id="hdr-periodo">Cargando…</p>
+  </div>
+  <div class="kpi-strip">
+    <div class="kpi-box"><div class="val" id="kpi-total">—</div><div class="lbl">Tareas</div></div>
+    <div class="kpi-box" style="background:rgba(46,125,50,.4)"><div class="val" id="kpi-done">—</div><div class="lbl">Completadas</div></div>
+    <div class="kpi-box" style="background:rgba(230,81,0,.4)"><div class="val" id="kpi-delayed">—</div><div class="lbl">Demoradas</div></div>
+    <div class="kpi-box"><div class="val" id="kpi-units">—</div><div class="lbl">Unidades</div></div>
+  </div>
+</div>
+<div class="tab-bar">
+  <div class="tab active" onclick="showTab('resumen',this)">📊 Resumen</div>
+  <div class="tab" onclick="showTab('zonas',this)">📍 Zonas</div>
+  <div class="tab" onclick="showTab('mapa',this)">🗺️ Mapa</div>
+  <div class="tab" onclick="showTab('flota',this)">🚛 Flota</div>
+  <div class="tab" onclick="showTab('ralenti',this)">⏱️ Ralentí</div>
+</div>
+
+<div id="tab-resumen" class="tab-content active">
+  <div class="card"><h2>📅 Tareas por Día</h2><canvas id="chartDias" height="80"></canvas></div>
+  <div class="grid-2">
+    <div class="card"><h2>📍 Cumplimiento por Zona</h2><canvas id="chartZonas"></canvas></div>
+    <div class="card"><h2>🏢 Top Clientes</h2><canvas id="chartClientes"></canvas></div>
+  </div>
+  <div class="card"><h2>📈 Tendencia Diaria</h2><canvas id="chartTrend" height="80"></canvas></div>
+</div>
+
+<div id="tab-zonas" class="tab-content">
+  <div id="zonaCards"></div>
+  <div class="card"><h2>🏆 Rendimiento por Unidad</h2><canvas id="chartUnits" height="120"></canvas></div>
+</div>
+
+<div id="tab-mapa" class="tab-content">
+  <div class="card">
+    <h2>🗺️ Mapa de Entregas</h2>
+    <div class="legend-bar">
+      <div class="leg-item"><div class="leg-dot" style="background:#2E7D32"></div>Completada</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#E65100"></div>Demorada</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#888"></div>Sin asignar</div>
+    </div>
+    <div id="map"></div>
+  </div>
+</div>
+
+<div id="tab-flota" class="tab-content">
+  <div class="card"><h2>🚛 KPIs de Flota</h2><div id="fleetKpis" class="grid-3"></div></div>
+  <div class="card"><h2>📋 Detalle por Unidad</h2>
+    <table><thead><tr><th>Unidad</th><th>Completadas</th><th>Demoradas</th><th>% Cumplimiento</th></tr></thead>
+    <tbody id="tbodyFlota"></tbody></table>
+  </div>
+</div>
+
+<div id="tab-ralenti" class="tab-content">
+  <div class="card"><h2>⏱️ Ralentí por Unidad</h2>
+    <table><thead><tr><th>Unidad</th><th>Zona</th><th>H. Ralentí</th><th>H. Movimiento</th><th>% Ralentí</th><th>Estado</th></tr></thead>
+    <tbody id="tbodyRalenti"></tbody></table>
+  </div>
+  <div class="card"><h2>📍 Ralentí por Zona</h2>
+    <table><thead><tr><th>Zona</th><th>H. Ralentí</th><th>H. Movimiento</th><th>% Ralentí</th></tr></thead>
+    <tbody id="tbodyRalentiZonas"></tbody></table>
+  </div>
+</div>
+
+<script>
+function showTab(id,el){
+  document.querySelectorAll('.tab-content').forEach(d=>d.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  el.classList.add('active');
+  if(id==='mapa'&&window._map) window._map.invalidateSize();
+  if(id==='ralenti'&&!window._ralBuilt){ buildRalenti(); window._ralBuilt=true; }
+}
+
+let D = null;
+
+function initAll(data){
+  D = data;
+  // Header
+  document.getElementById('hdr-periodo').textContent = 'Período: ' + D.periodo + ' · Actualizado: ' + D.generado;
+  document.getElementById('kpi-total').textContent = D.kpi.total;
+  document.getElementById('kpi-done').textContent = D.kpi.done;
+  document.getElementById('kpi-delayed').textContent = D.kpi.delayed;
+  document.getElementById('kpi-units').textContent = D.kpi.units;
+
+  // Charts resumen
+  new Chart(document.getElementById('chartDias'), {
+    type:'bar',
+    data:{labels:D.diasLabels,datasets:[{label:'Tareas',data:D.diasVals,backgroundColor:'#1A237E'}]},
+    options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}
+  });
+
+  new Chart(document.getElementById('chartZonas'), {
+    type:'bar',
+    data:{labels:D.zoneNames,
+      datasets:[
+        {label:'Completadas',data:D.zoneDone,backgroundColor:D.zoneColors},
+        {label:'Demoradas',data:D.zoneDelay,backgroundColor:'#FFCDD2'}
+      ]},
+    options:{plugins:{legend:{position:'top'}},scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true}}}
+  });
+
+  new Chart(document.getElementById('chartClientes'), {
+    type:'bar',
+    data:{labels:D.cliLabels,datasets:[{label:'Entregas',data:D.cliVals,backgroundColor:'#388E3C'}]},
+    options:{indexAxis:'y',plugins:{legend:{display:false}}}
+  });
+
+  new Chart(document.getElementById('chartTrend'), {
+    type:'line',
+    data:{labels:D.trendLabels,
+      datasets:[
+        {label:'Completadas',data:D.trendDone,borderColor:'#2E7D32',backgroundColor:'rgba(46,125,50,.1)',fill:true},
+        {label:'Demoradas',data:D.trendDelay,borderColor:'#C62828',backgroundColor:'rgba(198,40,40,.1)',fill:true},
+        {label:'Sin asignar',data:D.trendUnass,borderColor:'#888',backgroundColor:'rgba(136,136,136,.1)',fill:true}
+      ]},
+    options:{plugins:{legend:{position:'top'}},scales:{y:{beginAtZero:true}}}
+  });
+
+  // Zona cards
+  const zc = document.getElementById('zonaCards');
+  D.zoneNames.forEach((z,i)=>{
+    const tot = D.zoneDone[i]+D.zoneDelay[i];
+    const pct = tot>0?Math.round(D.zoneDone[i]/tot*100):0;
+    zc.innerHTML += `<div class="zone-card">
+      <div style="font-size:18px;font-weight:800;color:${D.zoneColors[i]}">${z}</div>
+      <div style="display:flex;gap:16px;margin:8px 0;font-size:13px">
+        <span style="color:#2E7D32;font-weight:600">✔ ${D.zoneDone[i]} completadas</span>
+        <span style="color:#E65100;font-weight:600">⚠ ${D.zoneDelay[i]} demoradas</span>
+      </div>
+      <div class="progress-bar"><div style="height:100%;background:${D.zoneColors[i]};width:${pct}%"></div></div>
+      <div style="font-size:12px;color:#666">${pct}% cumplimiento</div>
+    </div>`;
+  });
+
+  new Chart(document.getElementById('chartUnits'), {
+    type:'bar',
+    data:{labels:D.unitLabels,
+      datasets:[
+        {label:'Completadas',data:D.unitDone,backgroundColor:D.unitColors},
+        {label:'Demoradas',data:D.unitDelay,backgroundColor:'#FFCDD2'}
+      ]},
+    options:{indexAxis:'y',plugins:{legend:{position:'top'}},scales:{x:{stacked:true},y:{stacked:true}}}
+  });
+
+  // Flota KPIs
+  const fl = D.fleet;
+  document.getElementById('fleetKpis').innerHTML = `
+    <div class="kpi-fleet" style="background:linear-gradient(135deg,#1565C0,#1976D2)"><div class="kf-val">${fl.km} km</div><div class="kf-lbl">🛣️ KM Recorridos</div></div>
+    <div class="kpi-fleet" style="background:linear-gradient(135deg,#2E7D32,#388E3C)"><div class="kf-val">${fl.trips}</div><div class="kf-lbl">🔁 Total Viajes</div></div>
+    <div class="kpi-fleet" style="background:linear-gradient(135deg,#F57F17,#F9A825)"><div class="kf-val">${fl.speed_kmh} km/h</div><div class="kf-lbl">⚡ Velocidad Promedio</div></div>
+    <div class="kpi-fleet" style="background:linear-gradient(135deg,#6A1B9A,#7B1FA2)"><div class="kf-val">${fl.idle_h} h</div><div class="kf-lbl">🅿️ Ralentí Total</div></div>
+    <div class="kpi-fleet" style="background:linear-gradient(135deg,#00695C,#00897B)"><div class="kf-val">${fl.mov_h} h</div><div class="kf-lbl">🚗 Horas Movimiento</div></div>
+    <div class="kpi-fleet" style="background:linear-gradient(135deg,#37474F,#546E7A)"><div class="kf-val">${fl.units_active}</div><div class="kf-lbl">🚛 Unidades Activas</div></div>
+  `;
+
+  // Flota tabla
+  const tb = document.getElementById('tbodyFlota');
+  D.unitLabels.forEach((u,i)=>{
+    const pct = D.unitPct[i];
+    const col = pct>=80?'#2E7D32':pct>=50?'#E65100':'#C62828';
+    tb.innerHTML += `<tr><td>${u}</td><td style="color:#2E7D32;font-weight:600">${D.unitDone[i]}</td><td style="color:#E65100;font-weight:600">${D.unitDelay[i]}</td><td style="color:${col};font-weight:700">${pct}%</td></tr>`;
+  });
+
+  // Mapa
+  const map = L.map('map').setView([8.7613,-80.1404],8);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap'}).addTo(map);
+  window._map = map;
+}
+
+function buildRalenti(){
+  const tb = document.getElementById('tbodyRalenti');
+  D.ralentiData.forEach(d=>{
+    const col = d.pct_idle>=80?'#C62828':d.pct_idle>=60?'#E65100':'#2E7D32';
+    const estado = d.pct_idle>=80?'🔴 Alto':d.pct_idle>=60?'🟡 Moderado':'🟢 Bajo';
+    tb.innerHTML += `<tr><td>${d.label}</td><td style="color:${d.zcolor};font-weight:600">${d.zone}</td><td>${d.idle_h}h</td><td>${d.trip_h}h</td><td style="color:${col};font-weight:700">${d.pct_idle}%</td><td>${estado}</td></tr>`;
+  });
+  const tz = document.getElementById('tbodyRalentiZonas');
+  D.ralentiZones.forEach(z=>{
+    const col = z.pct>=80?'#C62828':z.pct>=60?'#E65100':'#2E7D32';
+    tz.innerHTML += `<tr><td style="color:${z.color};font-weight:700">${z.name}</td><td>${z.idle_h}h</td><td>${z.trip_h}h</td><td style="color:${col};font-weight:700">${z.pct}%</td></tr>`;
+  });
+}
+
+// Carga datos
+fetch('datos.json')
+  .then(r => r.json())
+  .then(data => initAll(data))
+  .catch(e => { document.body.innerHTML += '<p style="color:red;padding:20px">Error cargando datos.json: '+e+'</p>'; });
+</script>
+</body>
+</html>
