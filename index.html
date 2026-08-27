@@ -472,27 +472,27 @@ function showTab(name, el) {
 }
 
 // ── CHARTS ───────────────────────────────────────────────────────────────────
-const diasLabels  = ["08-01", "08-03", "08-04", "08-05", "08-06", "08-07", "08-08", "08-10", "08-11", "08-12", "08-13"];
-const diasVals    = [22, 15, 23, 19, 27, 22, 15, 22, 26, 7, 2];
-const zoneNames   = ["DAVID", "TOCUMEN", "CHITRE", "CHORRERA", "AGUADULCE"];
-const zoneDone    = [12, 31, 13, 52, 11];
-const zoneDelay   = [0, 0, 0, 18, 0];
-const zoneUnass   = [0, 0, 0, 0, 0];
-const zoneColors  = ["#F44336", "#FF9800", "#009688", "#8BC34A", "#3F51B5"];
-const cliLabels   = ["CONCRETEX MA\u00d1ANITAS", "CONCRETEX VACAMONTE", "TECNO BLOCK", "CONCRETEX EMBARCADERO", "CONCRETEX COLON", "DISE\u00d1OS DE CONCRETO CA - P1", "KRIPTON VIA A SALAMANCA", "CONCRETEX COL\u00d3N", "FERRETERIA TOMMY", "CHAGRES HOME CENTER", "HOU WONG", "FERRICENTRO SAN JUAN"];
-const cliVals     = [9, 7, 5, 3, 3, 3, 3, 2, 2, 2, 2, 1];
-const trendLabels = ["08-01", "08-03", "08-04", "08-05", "08-06", "08-07", "08-08", "08-10", "08-11", "08-12", "08-13"];
-const trendDone   = [12, 6, 17, 11, 17, 14, 7, 14, 18, 3, 0];
-const trendDelay  = [2, 4, 3, 2, 4, 0, 0, 1, 1, 1, 0];
-const trendUnass  = [8, 5, 3, 6, 6, 8, 8, 7, 7, 3, 2];
-const unitLabels  = ["Foton EN8424 E.Herrera", "Foton EN8468 J.Abel", "Tocumen 295286", "Plataforma Aguadulce", "Inter Azul CU4994", "AN4246 Plataforma 1", "CHITRE AUX", "Foton EN8423 E.Medina", "Serrano DAVID", "Celso Marin AH9975", "Foton EN8426 J.L\u00f3pez", "Jorge Aguilar AJ2549", "Enrique Corro", "Carlos Carri\u00f3n", "Manuel Murada"];
-const unitDone    = [2, 9, 22, 11, 7, 9, 13, 6, 12, 5, 7, 7, 4, 4, 1];
-const unitDelay   = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 4, 3, 5, 5];
-const unitPct     = [100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 87.5, 63.6, 57.1, 44.4, 16.7];
-const unitColors  = ["#8BC34A", "#8BC34A", "#FF9800", "#3F51B5", "#8BC34A", "#FF9800", "#009688", "#8BC34A", "#F44336", "#8BC34A", "#8BC34A", "#8BC34A", "#8BC34A", "#8BC34A", "#8BC34A"];
+let diasLabels  = ["08-01", "08-03", "08-04", "08-05", "08-06", "08-07", "08-08", "08-10", "08-11", "08-12", "08-13"];
+let diasVals    = [22, 15, 23, 19, 27, 22, 15, 22, 26, 7, 2];
+let zoneNames   = ["DAVID", "TOCUMEN", "CHITRE", "CHORRERA", "AGUADULCE"];
+let zoneDone    = [12, 31, 13, 52, 11];
+let zoneDelay   = [0, 0, 0, 18, 0];
+let zoneUnass   = [0, 0, 0, 0, 0];
+let zoneColors  = ["#F44336", "#FF9800", "#009688", "#8BC34A", "#3F51B5"];
+let cliLabels   = ["CONCRETEX MA\u00d1ANITAS", "CONCRETEX VACAMONTE", "TECNO BLOCK", "CONCRETEX EMBARCADERO", "CONCRETEX COLON", "DISE\u00d1OS DE CONCRETO CA - P1", "KRIPTON VIA A SALAMANCA", "CONCRETEX COL\u00d3N", "FERRETERIA TOMMY", "CHAGRES HOME CENTER", "HOU WONG", "FERRICENTRO SAN JUAN"];
+let cliVals     = [9, 7, 5, 3, 3, 3, 3, 2, 2, 2, 2, 1];
+let trendLabels = ["08-01", "08-03", "08-04", "08-05", "08-06", "08-07", "08-08", "08-10", "08-11", "08-12", "08-13"];
+let trendDone   = [12, 6, 17, 11, 17, 14, 7, 14, 18, 3, 0];
+let trendDelay  = [2, 4, 3, 2, 4, 0, 0, 1, 1, 1, 0];
+let trendUnass  = [8, 5, 3, 6, 6, 8, 8, 7, 7, 3, 2];
+let unitLabels  = ["Foton EN8424 E.Herrera", "Foton EN8468 J.Abel", "Tocumen 295286", "Plataforma Aguadulce", "Inter Azul CU4994", "AN4246 Plataforma 1", "CHITRE AUX", "Foton EN8423 E.Medina", "Serrano DAVID", "Celso Marin AH9975", "Foton EN8426 J.L\u00f3pez", "Jorge Aguilar AJ2549", "Enrique Corro", "Carlos Carri\u00f3n", "Manuel Murada"];
+let unitDone    = [2, 9, 22, 11, 7, 9, 13, 6, 12, 5, 7, 7, 4, 4, 1];
+let unitDelay   = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 4, 3, 5, 5];
+let unitPct     = [100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 87.5, 63.6, 57.1, 44.4, 16.7];
+let unitColors  = ["#8BC34A", "#8BC34A", "#FF9800", "#3F51B5", "#8BC34A", "#FF9800", "#009688", "#8BC34A", "#F44336", "#8BC34A", "#8BC34A", "#8BC34A", "#8BC34A", "#8BC34A", "#8BC34A"];
 
 // Gauge donut
-new Chart(document.getElementById('chartGauge'), {
+const chGauge = new Chart(document.getElementById('chartGauge'), {
   type: 'doughnut',
   data: {
     labels: ['Completadas','Demoradas','Sin asignar'],
@@ -521,7 +521,7 @@ new Chart(document.getElementById('chartGauge'), {
 });
 
 // Trend chart (stacked bars by day)
-new Chart(document.getElementById('chartTrend'), {
+const chTrend = new Chart(document.getElementById('chartTrend'), {
   type: 'bar',
   data: {
     labels: trendLabels,
@@ -544,7 +544,7 @@ new Chart(document.getElementById('chartTrend'), {
   }
 });
 
-new Chart(document.getElementById('chartDias'), {
+const chDias = new Chart(document.getElementById('chartDias'), {
   type: 'bar',
   data: {
     labels: diasLabels,
@@ -562,7 +562,7 @@ new Chart(document.getElementById('chartDias'), {
   }
 });
 
-new Chart(document.getElementById('chartPie'), {
+const chPie = new Chart(document.getElementById('chartPie'), {
   type: 'doughnut',
   data: {
     labels: ['Completadas','Demoradas','Sin asignar'],
@@ -578,7 +578,7 @@ new Chart(document.getElementById('chartPie'), {
   }
 });
 
-new Chart(document.getElementById('chartZonas'), {
+const chZonas = new Chart(document.getElementById('chartZonas'), {
   type: 'bar',
   data: {
     labels: zoneNames,
@@ -595,7 +595,7 @@ new Chart(document.getElementById('chartZonas'), {
   }
 });
 
-new Chart(document.getElementById('chartClientes'), {
+const chClientes = new Chart(document.getElementById('chartClientes'), {
   type: 'bar',
   data: {
     labels: cliLabels,
@@ -643,35 +643,33 @@ fetch('datos.json')
     repl(unitLabels, d.unitLabels); repl(unitDone, d.unitDone);
     repl(unitDelay, d.unitDelay); repl(unitPct, d.unitPct); repl(unitColors, d.unitColors);
 
-    // Gauge + Pie: done / delayed / unassigned
-    if (d.kpi) {
-      const unass = (d.kpi.total - d.kpi.done - d.kpi.delayed) || 0;
-      chGauge.data.datasets[0].data = [d.kpi.done, d.kpi.delayed, unass];
-      chGauge.update();
-      chPie.data.datasets[0].data = [d.kpi.done, d.kpi.delayed, unass];
-      chPie.update();
-    }
-    // Trend
-    chTrend.data.labels = trendLabels;
-    chTrend.data.datasets[0].data = trendDone;
-    chTrend.data.datasets[1].data = trendDelay;
-    chTrend.data.datasets[2].data = trendUnass;
-    chTrend.update();
-    // Días
-    chDias.data.labels = diasLabels;
-    chDias.data.datasets[0].data = diasVals;
-    chDias.update();
-    // Zonas
-    chZonas.data.labels = zoneNames;
-    chZonas.data.datasets[0].data = zoneDone;
-    chZonas.data.datasets[0].backgroundColor = zoneColors;
-    chZonas.data.datasets[1].data = zoneDelay;
-    chZonas.update();
-    // Clientes
-    chClientes.data.labels = cliLabels;
-    chClientes.data.datasets[0].data = cliVals;
-    chClientes.data.datasets[0].backgroundColor = cliLabels.map((_,i)=>`hsl(${10+i*8},70%,45%)`);
-    chClientes.update();
+    // Charts (wrapped in try-catch to not block table rebuilding)
+    try {
+      if (d.kpi) {
+        const unass = (d.kpi.total - d.kpi.done - d.kpi.delayed) || 0;
+        chGauge.data.datasets[0].data = [d.kpi.done, d.kpi.delayed, unass];
+        chGauge.update();
+        chPie.data.datasets[0].data = [d.kpi.done, d.kpi.delayed, unass];
+        chPie.update();
+      }
+      chTrend.data.labels = trendLabels;
+      chTrend.data.datasets[0].data = trendDone;
+      chTrend.data.datasets[1].data = trendDelay;
+      chTrend.data.datasets[2].data = trendUnass;
+      chTrend.update();
+      chDias.data.labels = diasLabels;
+      chDias.data.datasets[0].data = diasVals;
+      chDias.update();
+      chZonas.data.labels = zoneNames;
+      chZonas.data.datasets[0].data = zoneDone;
+      chZonas.data.datasets[0].backgroundColor = zoneColors;
+      chZonas.data.datasets[1].data = zoneDelay;
+      chZonas.update();
+      chClientes.data.labels = cliLabels;
+      chClientes.data.datasets[0].data = cliVals;
+      chClientes.data.datasets[0].backgroundColor = cliLabels.map((_,i)=>`hsl(${10+i*8},70%,45%)`);
+      chClientes.update();
+    } catch(e) { console.warn('Chart update:', e); }
   })
   .catch(() => {}); // silently fail if datos.json no disponible
 
