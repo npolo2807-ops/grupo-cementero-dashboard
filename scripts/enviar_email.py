@@ -57,10 +57,10 @@ html = f"""<!DOCTYPE html>
     </div>
     <div style="text-align:center;margin:1.5rem 0;">
       <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center"><tr>
-        <td style="background:#1a237e;border-radius:8px;padding:12px 28px;">
+        <td bgcolor="#0288D1" style="background-color:#0288D1;border-radius:8px;padding:14px 32px;">
           <a href="https://grupocementero.npgservices.com" target="_blank"
-             style="color:white;text-decoration:none;font-size:14px;font-weight:500;font-family:Arial,sans-serif;display:inline-block;">
-            Ver dashboard completo →
+             style="color:#ffffff;text-decoration:none;font-size:15px;font-weight:bold;font-family:Arial,sans-serif;display:inline-block;color:#ffffff;">
+            🔗 Ver dashboard completo →
           </a>
         </td>
       </tr></table>
