@@ -133,6 +133,19 @@ tbody td{padding:8px 12px;border-bottom:1px solid #eee;vertical-align:middle}
   <div class="tab" onclick="showTab('tareas',this)">📋 Tareas</div>
 </div>
 
+<!-- FILTRO GLOBAL DE FECHAS -->
+<div id="barra-fechas" style="background:white;padding:10px 20px;display:flex;gap:14px;align-items:center;border-bottom:2px solid #eee;flex-wrap:wrap;box-shadow:0 1px 4px rgba(0,0,0,.06)">
+  <span style="font-size:13px;font-weight:700;color:#C62828">📅 Período:</span>
+  <label style="font-size:13px;font-weight:600">Desde:
+    <input type="date" id="gDesde" onchange="aplicarFiltroGlobal()" style="margin-left:6px;padding:4px 8px;border-radius:6px;border:1px solid #ddd;font-size:13px">
+  </label>
+  <label style="font-size:13px;font-weight:600">Hasta:
+    <input type="date" id="gHasta" onchange="aplicarFiltroGlobal()" style="margin-left:6px;padding:4px 8px;border-radius:6px;border:1px solid #ddd;font-size:13px">
+  </label>
+  <button onclick="limpiarFiltroGlobal()" style="padding:5px 14px;border-radius:6px;border:1px solid #ddd;background:#f5f5f5;cursor:pointer;font-size:13px">✕ Limpiar</button>
+  <span id="gContador" style="font-size:12px;color:#888;font-style:italic"></span>
+</div>
+
 <!-- TAB 1: PRODUCTIVIDAD -->
 <div id="tab-productividad" class="tab-content active">
 
@@ -627,6 +640,12 @@ const chClientes = new Chart(document.getElementById('chartClientes'), {
 fetch('datos.json')
   .then(r => r.json())
   .then(d => {
+    window._datosRaw = d; // store for global filter
+    aplicarFiltroGlobal(); // apply any active date filter
+  })
+  .catch(() => {});
+
+function _renderDatos(d) {
     // KPI strip
     if (d.kpi) {
       if (document.getElementById('kpi-total'))   document.getElementById('kpi-total').textContent   = d.kpi.total   ?? '';
@@ -858,8 +877,7 @@ fetch('datos.json')
     }
 
 
-  })
-  .catch(() => {}); // silently fail si datos.json no disponible
+} // end _renderDatos
 
 // ── MAPA LEAFLET ─────────────────────────────────────────────────────────────
 window._mapInit = false;
@@ -1091,6 +1109,101 @@ function limpiarFiltros() {
   document.getElementById('filtroDesde').value  = '';
   document.getElementById('filtroHasta').value  = '';
   filtrarTabla();
+}
+
+function aplicarFiltroGlobal() {
+  var d = window._datosRaw;
+  if (!d) return;
+  var desde = (document.getElementById('gDesde')||{}).value || '';
+  var hasta = (document.getElementById('gHasta')||{}).value || '';
+
+  // If no filter, render raw data
+  if (!desde && !hasta) {
+    var ctr = document.getElementById('gContador');
+    if (ctr) ctr.textContent = '';
+    _renderDatos(d);
+    return;
+  }
+
+  // Filter taskList by date
+  var tasks = (d.taskList||[]).filter(function(t) {
+    var dt = t.date || '';
+    return (!desde || dt >= desde) && (!hasta || dt <= hasta);
+  });
+  var ctr = document.getElementById('gContador');
+  if (ctr) ctr.textContent = tasks.length + ' tareas en el período';
+
+  // Recompute KPIs
+  var total = tasks.length, done = 0, delayed = 0;
+  var units = {};
+  tasks.forEach(function(t) {
+    if (t.status === 'done') done++;
+    else if (t.status === 'delayed') delayed++;
+    if (t.label) units[t.label] = true;
+  });
+  var pct = total > 0 ? Math.round(done/total*100) : 0;
+
+  // Recompute zone stats
+  var zones = {};
+  tasks.forEach(function(t) {
+    var z = t.zone || 'Sin zona';
+    if (!zones[z]) zones[z] = {done:0,delay:0,color:''};
+    if (t.status==='done') zones[z].done++;
+    else if (t.status==='delayed') zones[z].delay++;
+    if (t.color) zones[z].color = t.color;
+  });
+
+  // Recompute unit (destination) stats
+  var unitMap = {};
+  tasks.forEach(function(t) {
+    var lbl = t.label || 'Sin asignar';
+    if (!unitMap[lbl]) unitMap[lbl] = {done:0,delay:0,color:t.color||'#9E9E9E'};
+    if (t.status==='done') unitMap[lbl].done++;
+    else if (t.status==='delayed') unitMap[lbl].delay++;
+  });
+  var sortedUnits = Object.keys(unitMap).sort(function(a,b){ return unitMap[b].done - unitMap[a].done; }).slice(0,15);
+
+  // Recompute trend (group by week label from date)
+  var trendMap = {};
+  tasks.forEach(function(t) {
+    if (!t.date) return;
+    var wk = t.date.slice(0,7); // YYYY-MM grouping
+    if (!trendMap[wk]) trendMap[wk] = {done:0,delay:0,unass:0};
+    if (t.status==='done') trendMap[wk].done++;
+    else if (t.status==='delayed') trendMap[wk].delay++;
+    else trendMap[wk].unass++;
+  });
+  var trendKeys = Object.keys(trendMap).sort();
+
+  // Build filtered data object
+  var zoneNames2 = Object.keys(zones).sort();
+  var fd = {
+    kpi: { total:total, done:done, delayed:delayed, units:Object.keys(units).length, pct:pct },
+    zoneNames: zoneNames2,
+    zoneDone:  zoneNames2.map(function(z){ return zones[z].done; }),
+    zoneDelay: zoneNames2.map(function(z){ return zones[z].delay; }),
+    zoneColors: zoneNames2.map(function(z){ return zones[z].color || '#9E9E9E'; }),
+    unitLabels: sortedUnits,
+    unitDone:   sortedUnits.map(function(u){ return unitMap[u].done; }),
+    unitDelay:  sortedUnits.map(function(u){ return unitMap[u].delay; }),
+    unitPct:    sortedUnits.map(function(u){ var tot=unitMap[u].done+unitMap[u].delay; return tot>0?Math.round(unitMap[u].done/tot*100):0; }),
+    unitColors: sortedUnits.map(function(u,i){ return 'hsl('+(10+i*8)+',60%,45%)'; }),
+    trendLabels: trendKeys,
+    trendDone:   trendKeys.map(function(k){ return trendMap[k].done; }),
+    trendDelay:  trendKeys.map(function(k){ return trendMap[k].delay; }),
+    trendUnass:  trendKeys.map(function(k){ return trendMap[k].unass; }),
+    diasLabels: d.diasLabels, diasVals: d.diasVals, // keep original day-of-week
+    cliLabels: d.cliLabels, cliVals: d.cliVals,
+    taskList: tasks,
+    periodo: (desde || '…') + ' → ' + (hasta || '…')
+  };
+  _renderDatos(fd);
+}
+
+function limpiarFiltroGlobal() {
+  var gd = document.getElementById('gDesde'); if(gd) gd.value = '';
+  var gh = document.getElementById('gHasta'); if(gh) gh.value = '';
+  aplicarFiltroGlobal();
 }
 </script>
 </body>
