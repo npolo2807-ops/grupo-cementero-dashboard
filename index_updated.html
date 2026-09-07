@@ -1288,7 +1288,7 @@ function renderCalendario() {
     var bg = isStart||isEnd ? '#C62828' : inRange ? '#ffcdd2' : 'transparent';
     var col= isStart||isEnd ? 'white' : inRange ? '#B71C1C' : '#212121';
     var br = isStart ? '50% 0 0 50%' : isEnd ? '0 50% 50% 0' : inRange ? '0' : '50%';
-    cells += '<div onclick="seleccionarDia(''+dateStr+'')" '
+    cells += '<div onclick="seleccionarDia(\'' + dateStr + '\')" '
       + 'style="cursor:pointer;padding:5px 2px;border-radius:'+br+';background:'+bg+';color:'+col+';font-size:12px;user-select:none" '
       + 'onmouseover="this.style.opacity=0.8" onmouseout="this.style.opacity=1">'
       + day + '</div>';
