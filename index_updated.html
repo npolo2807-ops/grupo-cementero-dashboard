@@ -1107,7 +1107,7 @@ function filtrarTabla() {
   const val    = document.getElementById('filtroEstado').value.toLowerCase();
   const desde  = document.getElementById('filtroDesde').value;  // YYYY-MM-DD
   const hasta  = document.getElementById('filtroHasta').value;  // YYYY-MM-DD
-  const rows   = document.querySelectorAll('#tablaTaskas tbody tr');
+  const rows   = document.querySelectorAll('#tbodyTareas tr');
   let visible  = 0;
   rows.forEach(r => {
     // header rows (zone separators) span 5 cols — always show
@@ -1221,6 +1221,10 @@ function aplicarFiltroGlobal() {
     periodo: (desde || '…') + ' → ' + (hasta || '…')
   };
   _renderDatos(fd);
+  // Sync local table filters with global date range
+  var fd2 = document.getElementById('filtroDesde'); if(fd2) fd2.value = desde;
+  var fh2 = document.getElementById('filtroHasta'); if(fh2) fh2.value = hasta;
+  filtrarTabla();
 }
 
 function limpiarFiltroGlobal() {
