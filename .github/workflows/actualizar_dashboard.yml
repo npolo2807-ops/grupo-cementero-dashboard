@@ -2,7 +2,7 @@ name: Actualizar Dashboard Grupo Cementero
 
 on:
   schedule:
-    - cron: '0 12 * * *'
+    - cron: '50 11 * * *'
   workflow_dispatch:
 
 jobs:
