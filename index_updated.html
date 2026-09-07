@@ -151,7 +151,7 @@ tbody td{padding:8px 12px;border-bottom:1px solid #eee;vertical-align:middle}
       </div>
       <!-- Apply button -->
       <div style="margin-top:10px">
-        <button onclick="aplicarFiltroGlobal();toggleRangoPicker();" style="width:100%;padding:10px;border-radius:8px;border:none;background:#C62828;color:white;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.15)">🔍 Aplicar filtro</button>
+        <button id="btnAplicar" onclick="btnAplicarClick()" style="width:100%;padding:10px;border-radius:8px;border:none;background:#C62828;color:white;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.15)">🔍 Aplicar filtro</button>
       </div>
     </div>
   </div>
@@ -1092,36 +1092,26 @@ function buildPctTable() {
   }).join('');
 }
 
-// ── FILTRO TABLA ─────────────────────────────────────────────────────────────
+// ── FILTRO TABLA (usa fechas del filtro global) ───────────────────────────────
 function filtrarTabla() {
-  const val    = document.getElementById('filtroEstado').value.toLowerCase();
-  const desde  = document.getElementById('filtroDesde').value;  // YYYY-MM-DD
-  const hasta  = document.getElementById('filtroHasta').value;  // YYYY-MM-DD
-  const rows   = document.querySelectorAll('#tbodyTareas tr');
-  let visible  = 0;
-  rows.forEach(r => {
-    // header rows (zone separators) span 5 cols — always show
+  var desde = (document.getElementById('gDesde')||{}).value || '';
+  var hasta = (document.getElementById('gHasta')||{}).value || '';
+  var rows  = document.querySelectorAll('#tbodyTareas tr');
+  var visible = 0;
+  rows.forEach(function(r) {
     if (r.querySelector('td[colspan]')) { r.style.display = ''; return; }
-    const txt  = r.innerText.toLowerCase();
-    // date is in the 3rd <td>
-    const tds  = r.querySelectorAll('td');
-    const rowDate = tds[2] ? tds[2].textContent.trim() : '';
-    const estadoOk = !val || txt.includes(val);
-    const desdeOk  = !desde || rowDate >= desde;
-    const hastaOk  = !hasta || rowDate <= hasta;
-    const show = estadoOk && desdeOk && hastaOk;
+    var tds = r.querySelectorAll('td');
+    var rowDate = tds[2] ? tds[2].textContent.trim() : '';
+    var desdeOk = !desde || rowDate >= desde;
+    var hastaOk = !hasta || rowDate <= hasta;
+    var show = desdeOk && hastaOk;
     r.style.display = show ? '' : 'none';
-    if (show && !r.querySelector('td[colspan]')) visible++;
+    if (show) visible++;
   });
-  const ctr = document.getElementById('filtroContador');
-  if (ctr) ctr.textContent = (desde||hasta||val) ? visible+' tareas' : '';
+  var ctr = document.getElementById('filtroContador');
+  if (ctr) ctr.textContent = (desde||hasta) ? visible + ' tareas en el período' : '';
 }
-function limpiarFiltros() {
-  document.getElementById('filtroEstado').value = '';
-  document.getElementById('filtroDesde').value  = '';
-  document.getElementById('filtroHasta').value  = '';
-  filtrarTabla();
-}
+function limpiarFiltros() { limpiarFiltroGlobal(); }
 
 function aplicarFiltroGlobal() {
   var d = window._datosRaw;
@@ -1220,7 +1210,26 @@ function aplicarFiltroGlobal() {
 function limpiarFiltroGlobal() {
   var gd = document.getElementById('gDesde'); if(gd) gd.value = '';
   var gh = document.getElementById('gHasta'); if(gh) gh.value = '';
+  _rangoStart = null; _rangoEnd = null; _pickingEnd = false;
+  actualizarBotonRango();
   aplicarFiltroGlobal();
+}
+
+function btnAplicarClick() {
+  var btn = document.getElementById('btnAplicar');
+  if (btn) { btn.textContent = '⏳ Buscando...'; btn.style.background = '#888'; btn.disabled = true; }
+  setTimeout(function() {
+    aplicarFiltroGlobal();
+    // Close picker
+    var p = document.getElementById('rangoPicker');
+    if (p) p.style.display = 'none';
+    var arr = document.getElementById('btnRangoArrow');
+    if (arr) arr.textContent = '▾';
+    if (btn) { btn.textContent = '✅ Filtro aplicado'; btn.style.background = '#2E7D32'; btn.disabled = false; }
+    setTimeout(function() {
+      if (btn) { btn.textContent = '🔍 Aplicar filtro'; btn.style.background = '#C62828'; }
+    }, 2000);
+  }, 400);
 }
 
 // ── CALENDAR DATE RANGE PICKER ─────────────────────────────────────────────
