@@ -51,6 +51,40 @@ def task_list(offset, limit=100, from_str=None, to_str=None):
     r.raise_for_status()
     return r.json()
 
+def tracker_tracks(tracker_id, from_str, to_str):
+    """Fetch track list summary for a tracker. Returns total km, trips, hours."""
+    try:
+        params = {'hash': NAVIXY_HASH, 'tracker_id': tracker_id,
+                  'from': from_str, 'to': to_str, 'limit': 10000}
+        r = requests.get(f'{NAVIXY_URL}/tracker/track/list', params=params, timeout=30)
+        r.raise_for_status()
+        data = r.json()
+        if not data.get('success'):
+            return None
+        total = data.get('total', {})
+        km = round(total.get('length', 0), 1)
+        trips = total.get('count', 0)
+        # trip_duration is ISO 8601 duration like PT44H56M14S
+        dur_str = total.get('trip_duration', 'PT0S')
+        hours = _parse_iso_duration_hours(dur_str)
+        # avg speed from trips
+        lst = data.get('list', [])
+        speeds = [t['avg_speed'] for t in lst if t.get('avg_speed', 0) > 0]
+        avg_speed = round(sum(speeds)/len(speeds)) if speeds else 0
+        return {'km': km, 'trips': trips, 'avg_speed': avg_speed, 'hours': round(hours, 1)}
+    except Exception as e:
+        print(f'  GPS error tracker {tracker_id}: {e}')
+        return None
+
+def _parse_iso_duration_hours(s):
+    """Parse PT##H##M##S into float hours."""
+    import re
+    s = s.replace('PT','')
+    h = re.search(r'(\d+)H', s)
+    m = re.search(r'(\d+)M', s)
+    sec = re.search(r'(\d+(?:\.\d+)?)S', s)
+    return (int(h.group(1)) if h else 0) + (int(m.group(1)) if m else 0)/60 + (float(sec.group(1)) if sec else 0)/3600
+
 # ── Fecha y periodo ───────────────────────────────────────────────────────────
 today = date.today()
 meses_corto = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic']
@@ -140,6 +174,26 @@ def unit_color(pct):
     if pct >= 50: return '#E65100'
     return '#C62828'
 
+# ── Fetch GPS stats por tracker ───────────────────────────────────────────────
+print('Obteniendo GPS stats por tracker...')
+tracker_gps = {}  # tracker_id -> {km, trips, avg_speed, hours}
+try:
+    tr = requests.get(f'{NAVIXY_URL}/tracker/list', params={'hash': NAVIXY_HASH}, timeout=30)
+    tr.raise_for_status()
+    all_trackers = tr.json().get('list', [])
+    print(f'  {len(all_trackers)} trackers encontrados')
+    for tk in all_trackers:
+        tid = tk['id']
+        lbl = tk.get('label', str(tid))
+        print(f'  Tracker {lbl}...')
+        stats = tracker_tracks(tid, from_str, to_str)
+        if stats and stats['km'] > 0:
+            tracker_gps[lbl] = stats
+        time.sleep(0.3)
+    print(f'  GPS stats: {len(tracker_gps)} trackers con datos')
+except Exception as e:
+    print(f'  Error listando trackers: {e}')
+
 # taskList completo
 task_list_data = []
 for t in sorted(all_tasks.values(), key=lambda x: x.get('from','') or ''):
@@ -185,6 +239,7 @@ datos = {
     'ralentiData': [],
     'ralentiZones': [],
     'taskList':    task_list_data,
+    'gpsStats':    tracker_gps,
 }
 
 with open('datos.json', 'w', encoding='utf-8') as f:
