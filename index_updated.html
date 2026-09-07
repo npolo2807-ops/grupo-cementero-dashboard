@@ -115,16 +115,17 @@ tbody td{padding:8px 12px;border-bottom:1px solid #eee;vertical-align:middle}
     <p>Reporte de Actividad de Flota · <span id="hdr-periodo">1 ago – 24 ago 2026</span> · Seguimiento Vehicular GPS</p>
   </div>
   <div class="kpi-strip">
-    <div class="kpi-box"><div class="val">444</div><div class="lbl">Tareas</div></div>
-    <div class="kpi-box" style="background:rgba(46,125,50,.4)"><div class="val">263</div><div class="lbl">Completadas</div></div>
-    <div class="kpi-box" style="background:rgba(230,81,0,.4)"><div class="val">41</div><div class="lbl">Demoradas</div></div>
-    <div class="kpi-box"><div class="val">17</div><div class="lbl">Unidades</div></div>
+    <div class="kpi-box"><div class="val" id="kpi-total">444</div><div class="lbl">Tareas</div></div>
+    <div class="kpi-box" style="background:rgba(46,125,50,.4)"><div class="val" id="kpi-done">263</div><div class="lbl">Completadas</div></div>
+    <div class="kpi-box" style="background:rgba(230,81,0,.4)"><div class="val" id="kpi-delayed">41</div><div class="lbl">Demoradas</div></div>
+    <div class="kpi-box"><div class="val" id="kpi-units">17</div><div class="lbl">Unidades</div></div>
   </div>
   <!-- DATE RANGE PICKER BUTTON -->
   <div style="position:relative;margin-left:12px;flex-shrink:0">
     <button id="btnRangoPicker" onclick="toggleRangoPicker()" style="background:white;color:#1B5E20;border:none;border-radius:20px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;box-shadow:0 2px 6px rgba(0,0,0,.2);white-space:nowrap">
       📅 <span id="btnRangoLabel">Filtrar período</span> <span id="btnRangoArrow">▾</span>
     </button>
+    <span id="gContador" style="color:white;font-size:12px;margin-left:8px;font-weight:600"></span>
     <div id="rangoPicker" style="display:none;position:absolute;right:0;top:calc(100% + 8px);background:white;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.18);z-index:9999;padding:16px;min-width:300px">
       <!-- Hidden inputs for compatibility -->
       <input type="hidden" id="gDesde"><input type="hidden" id="gHasta">
