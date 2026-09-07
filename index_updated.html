@@ -149,6 +149,10 @@ tbody td{padding:8px 12px;border-bottom:1px solid #eee;vertical-align:middle}
         <button onclick="rangoMesActual()" style="padding:4px 10px;border-radius:12px;border:1px solid #ddd;background:#f9f9f9;font-size:11px;cursor:pointer">Este mes</button>
         <button onclick="limpiarFiltroGlobal()" style="padding:4px 10px;border-radius:12px;border:1px solid #ffccbc;background:#fff3e0;font-size:11px;cursor:pointer;color:#BF360C">✕ Limpiar</button>
       </div>
+      <!-- Apply button -->
+      <div style="margin-top:10px">
+        <button onclick="aplicarFiltroGlobal();toggleRangoPicker();" style="width:100%;padding:10px;border-radius:8px;border:none;background:#C62828;color:white;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.15)">🔍 Aplicar filtro</button>
+      </div>
     </div>
   </div>
 </div>
@@ -370,24 +374,10 @@ tbody td{padding:8px 12px;border-bottom:1px solid #eee;vertical-align:middle}
 <!-- TAB 5: TAREAS -->
 <div id="tab-tareas" class="tab-content">
   <div class="card">
-    <h2>📋 Detalle Completo de Tareas – Agosto 2026</h2>
+    <h2>📋 Detalle Completo de Tareas</h2>
     <div style="margin-bottom:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
-      <label style="font-size:13px;font-weight:600">Estado:
-        <select id="filtroEstado" onchange="filtrarTabla()" style="margin-left:6px;padding:4px 8px;border-radius:6px;border:1px solid #ddd">
-          <option value="">Todos</option>
-          <option value="Completada">✓ Completadas</option>
-          <option value="Demorada">⏰ Demoradas</option>
-          <option value="Sin asignar">— Sin asignar</option>
-        </select>
-      </label>
-      <label style="font-size:13px;font-weight:600">Desde:
-        <input type="date" id="filtroDesde" onchange="filtrarTabla()" style="margin-left:6px;padding:4px 8px;border-radius:6px;border:1px solid #ddd">
-      </label>
-      <label style="font-size:13px;font-weight:600">Hasta:
-        <input type="date" id="filtroHasta" onchange="filtrarTabla()" style="margin-left:6px;padding:4px 8px;border-radius:6px;border:1px solid #ddd">
-      </label>
-      <button onclick="limpiarFiltros()" style="padding:5px 14px;border-radius:6px;border:1px solid #ddd;background:#f5f5f5;cursor:pointer;font-size:13px">✕ Limpiar</button>
-      <span id="filtroContador" style="font-size:12px;color:#888"></span>
+      <span style="font-size:13px;color:#888">Usa el botón 📅 del encabezado para filtrar por fecha</span>
+      <span id="filtroContador" style="font-size:13px;color:#C62828;font-weight:700"></span>
     </div>
     <table id="tablaTaskas">
       <thead><tr>
