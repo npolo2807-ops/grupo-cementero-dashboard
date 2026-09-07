@@ -1217,10 +1217,17 @@ function limpiarFiltroGlobal() {
 }
 
 function btnAplicarClick() {
+  // Sync _rangoStart/_rangoEnd → gDesde/gHasta before applying
+  var gd = document.getElementById('gDesde');
+  var gh = document.getElementById('gHasta');
+  if (gd && _rangoStart) gd.value = _rangoStart;
+  if (gh && _rangoEnd)   gh.value = _rangoEnd;
+
   var btn = document.getElementById('btnAplicar');
   if (btn) { btn.textContent = '⏳ Buscando...'; btn.style.background = '#888'; btn.disabled = true; }
   setTimeout(function() {
     aplicarFiltroGlobal();
+    actualizarBotonRango();
     // Close picker
     var p = document.getElementById('rangoPicker');
     if (p) p.style.display = 'none';
