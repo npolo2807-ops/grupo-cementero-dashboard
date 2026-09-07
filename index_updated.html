@@ -120,6 +120,36 @@ tbody td{padding:8px 12px;border-bottom:1px solid #eee;vertical-align:middle}
     <div class="kpi-box" style="background:rgba(230,81,0,.4)"><div class="val">41</div><div class="lbl">Demoradas</div></div>
     <div class="kpi-box"><div class="val">17</div><div class="lbl">Unidades</div></div>
   </div>
+  <!-- DATE RANGE PICKER BUTTON -->
+  <div style="position:relative;margin-left:12px;flex-shrink:0">
+    <button id="btnRangoPicker" onclick="toggleRangoPicker()" style="background:white;color:#1B5E20;border:none;border-radius:20px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;box-shadow:0 2px 6px rgba(0,0,0,.2);white-space:nowrap">
+      📅 <span id="btnRangoLabel">Filtrar período</span> <span id="btnRangoArrow">▾</span>
+    </button>
+    <div id="rangoPicker" style="display:none;position:absolute;right:0;top:calc(100% + 8px);background:white;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.18);z-index:9999;padding:16px;min-width:300px">
+      <!-- Hidden inputs for compatibility -->
+      <input type="hidden" id="gDesde"><input type="hidden" id="gHasta">
+      <div style="font-size:13px;font-weight:700;color:#1A237E;margin-bottom:12px;border-bottom:2px solid #C62828;padding-bottom:8px">📅 Seleccionar período</div>
+      <!-- Month navigation -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <button onclick="cambiarMes(-1)" style="background:none;border:1px solid #ddd;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:16px">‹</button>
+        <span id="mesLabel" style="font-size:14px;font-weight:700;color:#1A237E"></span>
+        <button onclick="cambiarMes(1)" style="background:none;border:1px solid #ddd;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:16px">›</button>
+      </div>
+      <!-- Calendar grid -->
+      <div id="calGrid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center;font-size:12px"></div>
+      <!-- Selected range display -->
+      <div style="margin-top:12px;padding:8px;background:#f5f5f5;border-radius:8px;font-size:12px;color:#555">
+        <span id="rangoTexto">Haz clic en una fecha de inicio</span>
+      </div>
+      <!-- Quick filters -->
+      <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">
+        <button onclick="rangoRapido(7)" style="padding:4px 10px;border-radius:12px;border:1px solid #ddd;background:#f9f9f9;font-size:11px;cursor:pointer">Últimos 7d</button>
+        <button onclick="rangoRapido(30)" style="padding:4px 10px;border-radius:12px;border:1px solid #ddd;background:#f9f9f9;font-size:11px;cursor:pointer">Últimos 30d</button>
+        <button onclick="rangoMesActual()" style="padding:4px 10px;border-radius:12px;border:1px solid #ddd;background:#f9f9f9;font-size:11px;cursor:pointer">Este mes</button>
+        <button onclick="limpiarFiltroGlobal()" style="padding:4px 10px;border-radius:12px;border:1px solid #ffccbc;background:#fff3e0;font-size:11px;cursor:pointer;color:#BF360C">✕ Limpiar</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- TABS -->
@@ -131,19 +161,6 @@ tbody td{padding:8px 12px;border-bottom:1px solid #eee;vertical-align:middle}
   <div class="tab" onclick="showTab('flota',this)">🚛 Flota</div>
   <div class="tab" onclick="showTab('kmflota',this)">📍 KM &amp; Ralentí</div>
   <div class="tab" onclick="showTab('tareas',this)">📋 Tareas</div>
-</div>
-
-<!-- FILTRO GLOBAL DE FECHAS -->
-<div id="barra-fechas" style="background:white;padding:10px 20px;display:flex;gap:14px;align-items:center;border-bottom:2px solid #eee;flex-wrap:wrap;box-shadow:0 1px 4px rgba(0,0,0,.06)">
-  <span style="font-size:13px;font-weight:700;color:#C62828">📅 Período:</span>
-  <label style="font-size:13px;font-weight:600">Desde:
-    <input type="date" id="gDesde" onchange="aplicarFiltroGlobal()" style="margin-left:6px;padding:4px 8px;border-radius:6px;border:1px solid #ddd;font-size:13px">
-  </label>
-  <label style="font-size:13px;font-weight:600">Hasta:
-    <input type="date" id="gHasta" onchange="aplicarFiltroGlobal()" style="margin-left:6px;padding:4px 8px;border-radius:6px;border:1px solid #ddd;font-size:13px">
-  </label>
-  <button onclick="limpiarFiltroGlobal()" style="padding:5px 14px;border-radius:6px;border:1px solid #ddd;background:#f5f5f5;cursor:pointer;font-size:13px">✕ Limpiar</button>
-  <span id="gContador" style="font-size:12px;color:#888;font-style:italic"></span>
 </div>
 
 <!-- TAB 1: PRODUCTIVIDAD -->
@@ -1205,6 +1222,153 @@ function limpiarFiltroGlobal() {
   var gh = document.getElementById('gHasta'); if(gh) gh.value = '';
   aplicarFiltroGlobal();
 }
+
+// ── CALENDAR DATE RANGE PICKER ─────────────────────────────────────────────
+var _calYear = new Date().getFullYear();
+var _calMonth = new Date().getMonth(); // 0-indexed
+var _rangoStart = null;
+var _rangoEnd = null;
+var _pickingEnd = false;
+
+var MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+var DIAS  = ['Lu','Ma','Mi','Ju','Vi','Sá','Do'];
+
+function toggleRangoPicker() {
+  var p = document.getElementById('rangoPicker');
+  var arr = document.getElementById('btnRangoArrow');
+  if (p.style.display === 'none') {
+    p.style.display = 'block';
+    arr.textContent = '▴';
+    renderCalendario();
+  } else {
+    p.style.display = 'none';
+    arr.textContent = '▾';
+  }
+}
+
+function cerrarRangoPicker(e) {
+  var picker = document.getElementById('rangoPicker');
+  var btn    = document.getElementById('btnRangoPicker');
+  if (picker && btn && !picker.contains(e.target) && !btn.contains(e.target)) {
+    picker.style.display = 'none';
+    document.getElementById('btnRangoArrow').textContent = '▾';
+  }
+}
+document.addEventListener('click', cerrarRangoPicker);
+
+function cambiarMes(dir) {
+  _calMonth += dir;
+  if (_calMonth > 11) { _calMonth = 0; _calYear++; }
+  if (_calMonth < 0)  { _calMonth = 11; _calYear--; }
+  renderCalendario();
+}
+
+function renderCalendario() {
+  document.getElementById('mesLabel').textContent = MESES[_calMonth] + ' ' + _calYear;
+  var grid = document.getElementById('calGrid');
+  var cells = '';
+  // Day headers
+  DIAS.forEach(function(d) {
+    cells += '<div style="font-weight:700;color:#888;padding:3px 0;font-size:11px">'+d+'</div>';
+  });
+  // First day of month (Monday=0)
+  var firstDay = new Date(_calYear, _calMonth, 1).getDay();
+  firstDay = (firstDay + 6) % 7; // convert Sun=0 to Mon=0
+  for (var i = 0; i < firstDay; i++) cells += '<div></div>';
+  var daysInMonth = new Date(_calYear, _calMonth + 1, 0).getDate();
+  for (var day = 1; day <= daysInMonth; day++) {
+    var dateStr = _calYear + '-' + String(_calMonth+1).padStart(2,'0') + '-' + String(day).padStart(2,'0');
+    var isStart  = _rangoStart === dateStr;
+    var isEnd    = _rangoEnd   === dateStr;
+    var inRange  = _rangoStart && _rangoEnd && dateStr > _rangoStart && dateStr < _rangoEnd;
+    var bg = isStart||isEnd ? '#C62828' : inRange ? '#ffcdd2' : 'transparent';
+    var col= isStart||isEnd ? 'white' : inRange ? '#B71C1C' : '#212121';
+    var br = isStart ? '50% 0 0 50%' : isEnd ? '0 50% 50% 0' : inRange ? '0' : '50%';
+    cells += '<div onclick="seleccionarDia(''+dateStr+'')" '
+      + 'style="cursor:pointer;padding:5px 2px;border-radius:'+br+';background:'+bg+';color:'+col+';font-size:12px;user-select:none" '
+      + 'onmouseover="this.style.opacity=0.8" onmouseout="this.style.opacity=1">'
+      + day + '</div>';
+  }
+  grid.innerHTML = cells;
+  // Update range text
+  var txt = '';
+  if (_rangoStart && _rangoEnd) txt = 'Desde ' + _rangoStart + ' hasta ' + _rangoEnd;
+  else if (_rangoStart) txt = 'Inicio: ' + _rangoStart + ' · Elige fecha final';
+  else txt = 'Haz clic en una fecha de inicio';
+  document.getElementById('rangoTexto').textContent = txt;
+}
+
+function seleccionarDia(dateStr) {
+  if (!_rangoStart || _pickingEnd === false && _rangoEnd) {
+    // Start fresh
+    _rangoStart = dateStr;
+    _rangoEnd = null;
+    _pickingEnd = true;
+  } else if (_pickingEnd) {
+    if (dateStr < _rangoStart) {
+      _rangoEnd = _rangoStart;
+      _rangoStart = dateStr;
+    } else {
+      _rangoEnd = dateStr;
+    }
+    _pickingEnd = false;
+    // Apply filter
+    document.getElementById('gDesde').value = _rangoStart;
+    document.getElementById('gHasta').value = _rangoEnd;
+    actualizarBotonRango();
+    aplicarFiltroGlobal();
+  }
+  renderCalendario();
+}
+
+function actualizarBotonRango() {
+  var lbl = document.getElementById('btnRangoLabel');
+  if (_rangoStart && _rangoEnd) {
+    var d1 = _rangoStart.slice(5).replace('-','/');
+    var d2 = _rangoEnd.slice(5).replace('-','/');
+    lbl.textContent = d1 + ' → ' + d2;
+    document.getElementById('btnRangoPicker').style.background = '#fff9c4';
+  } else {
+    lbl.textContent = 'Filtrar período';
+    document.getElementById('btnRangoPicker').style.background = 'white';
+  }
+}
+
+function rangoRapido(dias) {
+  var hoy  = new Date();
+  var hace = new Date(); hace.setDate(hoy.getDate() - dias + 1);
+  _rangoStart = hace.toISOString().slice(0,10);
+  _rangoEnd   = hoy.toISOString().slice(0,10);
+  _pickingEnd = false;
+  document.getElementById('gDesde').value = _rangoStart;
+  document.getElementById('gHasta').value = _rangoEnd;
+  actualizarBotonRango();
+  aplicarFiltroGlobal();
+  renderCalendario();
+}
+
+function rangoMesActual() {
+  var hoy = new Date();
+  _rangoStart = hoy.getFullYear() + '-' + String(hoy.getMonth()+1).padStart(2,'0') + '-01';
+  _rangoEnd   = hoy.toISOString().slice(0,10);
+  _pickingEnd = false;
+  document.getElementById('gDesde').value = _rangoStart;
+  document.getElementById('gHasta').value = _rangoEnd;
+  actualizarBotonRango();
+  aplicarFiltroGlobal();
+  renderCalendario();
+}
+
+// Override limpiarFiltroGlobal to also reset picker
+var _origLimpiar = limpiarFiltroGlobal;
+limpiarFiltroGlobal = function() {
+  _rangoStart = null; _rangoEnd = null; _pickingEnd = false;
+  actualizarBotonRango();
+  var gd = document.getElementById('gDesde'); if(gd) gd.value = '';
+  var gh = document.getElementById('gHasta'); if(gh) gh.value = '';
+  aplicarFiltroGlobal();
+  renderCalendario();
+};
 </script>
 </body>
 </html>
