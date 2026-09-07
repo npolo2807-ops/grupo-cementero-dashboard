@@ -825,24 +825,28 @@ function _renderDatos(d) {
       }).join('');
     }
 
-    // Rebuild Detalle por Unidad table (GPS data not available — show task summary)
+    // Rebuild Detalle por Unidad table — from gpsStats (tracker/vehicle data)
     const dbody = document.getElementById('tbodyDetalle');
-    if (dbody && d.unitLabels && d.unitLabels.length) {
-      const sorted4 = d.unitLabels.map((lbl,i) => ({lbl, done: d.unitDone[i]||0, delay: d.unitDelay[i]||0, pct: d.unitPct[i]||0}))
-        .sort((a,b) => b.done - a.done);
-      dbody.innerHTML = sorted4.map((u,i) => {
-        const tot = u.done + u.delay;
-        return '<tr style="background:' + (i%2===0?'#fafafa':'#fff') + '">'
-          + '<td><b>' + u.lbl + '</b>'
-          + '<div style="font-size:11px;color:#888;margin-top:2px">✓ ' + u.done + ' completadas &nbsp;|&nbsp; ⏰ ' + u.delay + ' demoradas &nbsp;|&nbsp; Total: ' + tot + '</div>'
-          + '</td>'
-          + '<td style="text-align:center;color:#888">N/D</td>'
-          + '<td style="text-align:center;color:#888">N/D</td>'
-          + '<td style="text-align:center;color:#888">N/D</td>'
-          + '<td style="text-align:center;color:#888">N/D</td>'
-          + '<td style="text-align:center;color:#888">N/D</td>'
-          + '</tr>';
-      }).join('');
+    if (dbody) {
+      const gps = d.gpsStats || {};
+      const gpsEntries = Object.entries(gps).sort((a,b) => b[1].km - a[1].km);
+      if (gpsEntries.length) {
+        const nd = '<td style="text-align:center;color:#aaa;font-size:12px">—</td>';
+        dbody.innerHTML = gpsEntries.map(([lbl, g], i) => {
+          // Clean label: remove trailing * and extra spaces
+          const name = lbl.replace(/\s*\*\s*$/, '').trim();
+          return '<tr style="background:' + (i%2===0?'#fafafa':'#fff') + '">'
+            + '<td><b>' + name + '</b></td>'
+            + '<td style="text-align:center;font-weight:700;color:#1565C0">' + g.km.toLocaleString('es-PA') + ' km</td>'
+            + '<td style="text-align:center;font-weight:600">' + g.trips + '</td>'
+            + '<td style="text-align:center">' + g.avg_speed + ' km/h</td>'
+            + '<td style="text-align:center">' + g.hours + ' h</td>'
+            + nd  // Ralentí: requiere reporte adicional de Navixy
+            + '</tr>';
+        }).join('');
+      } else {
+        dbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#888;padding:12px">Sin datos GPS disponibles</td></tr>';
+      }
     }
 
     // Rebuild tareas table + map markers from taskList
