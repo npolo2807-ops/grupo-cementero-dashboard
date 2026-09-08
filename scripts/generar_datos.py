@@ -56,19 +56,21 @@ def get_zone(t):
     return 'CHORRERA'
 
 def task_list(offset, limit=100, from_str=None, to_str=None):
-    params = {'hash': NAVIXY_HASH, 'limit': limit, 'offset': offset}
-    if from_str: params['from'] = from_str
-    if to_str:   params['to']   = to_str
-    r = requests.get(f'{NAVIXY_URL}/task/list', params=params, timeout=30)
+    url = f'{NAVIXY_URL}/task/list?hash={NAVIXY_HASH}&limit={limit}&offset={offset}'
+    if from_str: url += f'&from={from_str}'
+    if to_str:   url += f'&to={to_str}'
+    r = requests.get(url, timeout=30)
     r.raise_for_status()
     return r.json()
 
 def tracker_tracks(tracker_id, from_str, to_str):
     """Fetch track list summary for a tracker. Returns total km, trips, hours."""
     try:
-        params = {'hash': NAVIXY_HASH, 'tracker_id': tracker_id,
-                  'from': from_str, 'to': to_str, 'limit': 10000}
-        r = requests.get(f'{NAVIXY_URL}/tracker/track/list', params=params, timeout=30)
+        # Construir URL manualmente para evitar que requests encodee los : de la fecha
+        url = (f'{NAVIXY_URL}/tracker/track/list'
+               f'?hash={NAVIXY_HASH}&tracker_id={tracker_id}'
+               f'&from={from_str}&to={to_str}&limit=10000')
+        r = requests.get(url, timeout=30)
         r.raise_for_status()
         data = r.json()
         if not data.get('success'):
