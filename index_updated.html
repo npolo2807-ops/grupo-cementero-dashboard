@@ -1243,15 +1243,18 @@ function _procesarTareas(tasks, trackerMap) {
 
   var taskListData = tasks.map(function(t){
     var gz = _getZoneJS(t);
+    var tid = t.tracker_id;
+    var empleado = tid ? ((trackerMap && trackerMap[tid]) || 'Tracker '+tid) : 'Sin asignar';
     return {
-      label: t.label||'Sin asignar',
-      destino: _getDestinoJS(t),
-      date: (t.from||'').slice(0,10),
-      status: t.status,
-      zone: ZONE_DISPLAY_JS[gz]||gz,
-      color: ZONE_COLORS_JS[gz]||'#9E9E9E',
-      lat: ((t.location||{}).lat)||0,
-      lng: ((t.location||{}).lng)||0,
+      label:    t.label||'Sin asignar',
+      empleado: empleado,
+      destino:  _getDestinoJS(t),
+      date:     (t.from||'').slice(0,10),
+      status:   t.status,
+      zone:     ZONE_DISPLAY_JS[gz]||gz,
+      color:    ZONE_COLORS_JS[gz]||'#9E9E9E',
+      lat:      ((t.location||{}).lat)||0,
+      lng:      ((t.location||{}).lng)||0,
     };
   });
 
