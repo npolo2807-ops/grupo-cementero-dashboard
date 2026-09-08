@@ -206,7 +206,7 @@ while d_iter <= today:
 ZONE_ORDER = ['DAVID','CHITRE','AGUADULCE','TOCUMEN','CHORRERA']
 sorted_zones = [z for z in ZONE_ORDER if z in zone_stats]
 # sorted_units se calcula DESPUÉS del re-proceso de unit_stats (ver abajo)
-sorted_cli    = sorted(cli_stats.keys(), key=lambda c: -cli_stats[c]['count'])[:12]
+sorted_cli    = sorted(cli_stats.keys(), key=lambda c: -cli_stats[c]['count'])[:60]
 sorted_trend  = sorted(trend_stats.keys())
 
 def unit_pct(u):
@@ -246,7 +246,7 @@ for t in active:
     elif t['status'] in ('failed','delayed'): unit_stats[camion]['delayed'] += 1
 
 # Ahora sí calculamos sorted_units con los nombres reales de camiones
-sorted_units = sorted(unit_stats.keys(), key=lambda u: -(unit_stats[u]['done']+unit_stats[u]['delayed']))[:15]
+sorted_units = sorted(unit_stats.keys(), key=lambda u: -(unit_stats[u]['done']+unit_stats[u]['delayed']))
 print(f'  Unidades en ranking: {sorted_units[:5]}...')
 
 # ── Fetch GPS stats (km, viajes, velocidad) por tracker ──────────────────────
