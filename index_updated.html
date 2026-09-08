@@ -632,11 +632,11 @@ const chZonas = new Chart(document.getElementById('chartZonas'), {
 const chClientes = new Chart(document.getElementById('chartClientes'), {
   type: 'bar',
   data: {
-    labels: unitLabels,
+    labels: cliLabels,
     datasets: [{
       label: 'Entregas',
-      data: unitDone,
-      backgroundColor: unitLabels.map((_,i) => `hsl(${10+i*8},70%,45%)`),
+      data: cliVals,
+      backgroundColor: cliLabels.map((_,i) => `hsl(${10+i*8},70%,45%)`),
       borderRadius: 4,
     }]
   },
@@ -706,9 +706,9 @@ function _renderDatos(d) {
       chZonas.data.datasets[0].backgroundColor = zoneColors;
       chZonas.data.datasets[1].data = zoneDelay;
       chZonas.update();
-      chClientes.data.labels = unitLabels;
-      chClientes.data.datasets[0].data = unitDone;
-      chClientes.data.datasets[0].backgroundColor = unitLabels.map((_,i)=>`hsl(${10+i*8},70%,45%)`);
+      chClientes.data.labels = cliLabels;
+      chClientes.data.datasets[0].data = cliVals;
+      chClientes.data.datasets[0].backgroundColor = cliLabels.map((_,i)=>`hsl(${10+i*8},70%,45%)`);
       chClientes.update();
       // Rebuild detalle clientes table (Cliente + Destino)
       const cliBody = document.getElementById('tbodyCliDetalle');
