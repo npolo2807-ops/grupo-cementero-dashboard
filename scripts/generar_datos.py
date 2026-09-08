@@ -20,28 +20,27 @@ NAVIXY_URL  = 'https://api.navixy.com/v2'
 
 TRACKER_ZONES = {408346:'DAVID',1048369:'CHITRE',1051266:'AGUADULCE',1669379:'TOCUMEN'}
 
-# Grupos válidos — solo estos 6 aparecen en el dashboard
-VALID_ZONES = {'DAVID', 'CHITRE', 'AGUADULCE', 'TOCUMEN', 'CHORRERA', 'PORTATIL'}
+# Grupos válidos — solo estos 5 aparecen en el dashboard
+VALID_ZONES = {'DAVID', 'CHITRE', 'AGUADULCE', 'TOCUMEN', 'CHORRERA'}
 
 # Nombres de visualización para el dashboard
 ZONE_DISPLAY = {
     'DAVID':'David','CHITRE':'Chitre','AGUADULCE':'Agua Dulce',
-    'TOCUMEN':'Tocumen','CHORRERA':'Chorrera','PORTATIL':'Portátil',
+    'TOCUMEN':'Tocumen','CHORRERA':'Chorrera',
 }
 
 GEO_ZONES = {
     'david':'DAVID','chiriqui':'DAVID','chitre':'CHITRE','chitré':'CHITRE',
     'aguadulce':'AGUADULCE','agua dulce':'AGUADULCE',
     'tocumen':'TOCUMEN','chorrera':'CHORRERA','la chorrera':'CHORRERA',
-    'portatil':'PORTATIL','portátil':'PORTATIL','portable':'PORTATIL',
-    # Zonas que antes aparecían sueltas → ahora las absorbemos en CHORRERA
+    # Zonas que antes aparecían sueltas → ahora las absorbemos
     'colon':'CHORRERA','colón':'CHORRERA','arraijan':'CHORRERA',
     'arraiján':'CHORRERA','santiago':'CHITRE','divisa':'CHITRE',
     'panama':'TOCUMEN','panamá':'TOCUMEN',
 }
 ZONE_COLORS = {
     'DAVID':'#F44336','TOCUMEN':'#FF9800','CHITRE':'#009688',
-    'CHORRERA':'#8BC34A','AGUADULCE':'#3F51B5','PORTATIL':'#9C27B0',
+    'CHORRERA':'#8BC34A','AGUADULCE':'#3F51B5',
 }
 
 def get_zone(t):
@@ -186,7 +185,7 @@ while d_iter <= today:
     d_iter += timedelta(days=1)
 
 # Solo los 6 grupos válidos, en orden fijo
-ZONE_ORDER = ['DAVID','CHITRE','AGUADULCE','TOCUMEN','CHORRERA','PORTATIL']
+ZONE_ORDER = ['DAVID','CHITRE','AGUADULCE','TOCUMEN','CHORRERA']
 sorted_zones = [z for z in ZONE_ORDER if z in zone_stats]
 sorted_units  = sorted(unit_stats.keys(), key=lambda u: -(unit_stats[u]['done']+unit_stats[u]['delayed']))[:15]
 sorted_cli    = sorted(cli_stats.keys(), key=lambda c: -cli_stats[c]['count'])[:12]
@@ -204,23 +203,32 @@ def unit_color(pct):
 
 # ── Fetch GPS stats por tracker ───────────────────────────────────────────────
 print('Obteniendo GPS stats por tracker...')
-tracker_gps = {}  # tracker_id -> {km, trips, avg_speed, hours}
+tracker_gps = {}  # label -> {km, trips, avg_speed, hours}
 try:
     tr = requests.get(f'{NAVIXY_URL}/tracker/list', params={'hash': NAVIXY_HASH}, timeout=30)
     tr.raise_for_status()
-    all_trackers = tr.json().get('list', [])
+    tr_json = tr.json()
+    print(f'  tracker/list response success={tr_json.get("success")} status={tr_json.get("status")}')
+    all_trackers = tr_json.get('list', [])
     print(f'  {len(all_trackers)} trackers encontrados')
     for tk in all_trackers:
         tid = tk['id']
         lbl = tk.get('label', str(tid))
-        print(f'  Tracker {lbl}...')
-        stats = tracker_tracks(tid, from_str, to_str)
-        if stats and stats['km'] > 0:
-            tracker_gps[lbl] = stats
+        try:
+            print(f'  Tracker {lbl} (id={tid})...')
+            stats = tracker_tracks(tid, from_str, to_str)
+            if stats:
+                tracker_gps[lbl] = stats
+                print(f'    -> km={stats["km"]} viajes={stats["trips"]}')
+            else:
+                print(f'    -> sin datos')
+        except Exception as e2:
+            print(f'    -> error: {e2}')
         time.sleep(0.3)
     print(f'  GPS stats: {len(tracker_gps)} trackers con datos')
 except Exception as e:
     print(f'  Error listando trackers: {e}')
+    import traceback; traceback.print_exc()
 
 # taskList completo
 task_list_data = []
