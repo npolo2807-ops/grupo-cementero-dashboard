@@ -145,10 +145,15 @@ print(f'Activas: {TOTAL}  |  Done: {DONE}  |  Delayed: {DELAYED}  |  PCT: {PCT}%
 
 zone_stats = defaultdict(lambda: {'done':0,'delayed':0,'total':0})
 day_stats  = defaultdict(int)
-unit_stats = defaultdict(lambda: {'done':0,'delayed':0,'zone':'CHORRERA'})
+# unit_stats: agrupa por CAMIÓN (tracker label), no por cliente
+# {'done':0, 'delayed':0, 'zone':'CHORRERA', 'cliente':'...'}
+unit_stats = defaultdict(lambda: {'done':0,'delayed':0,'zone':'CHORRERA','cliente':''})
 # cli_stats: {cliente: {'count':0, 'destino': str}}
 cli_stats  = defaultdict(lambda: {'count':0,'destino':''})
 trend_stats = defaultdict(lambda: {'done':0,'delay':0,'unass':0})
+
+# Mapa tracker_id -> nombre del tracker (se llenará después del fetch GPS)
+tracker_id_to_label = {}
 
 def get_destino(t):
     """Extrae el nombre del destino de location.address (parte antes del //)."""
@@ -164,12 +169,18 @@ for t in active:
     elif t['status'] in ('failed','delayed'): zone_stats[z]['delayed'] += 1
     d = (t.get('from','') or '')[:10]
     if d: day_stats[d] += 1
-    lbl = t.get('label','Sin asignar')
-    unit_stats[lbl]['zone'] = z
-    if t['status'] == 'done':               unit_stats[lbl]['done'] += 1
-    elif t['status'] in ('failed','delayed'): unit_stats[lbl]['delayed'] += 1
-    # Cliente = label, Destino = parte antes del // en address
-    cli = lbl.strip() or 'Sin cliente'
+
+    # Unidad = nombre del camión (tracker), Cliente = label de la tarea
+    tid = t.get('tracker_id')
+    camion = tracker_id_to_label.get(tid, f'Tracker {tid}') if tid else 'Sin asignar'
+    cliente = t.get('label','Sin cliente').strip()
+    unit_stats[camion]['zone'] = z
+    unit_stats[camion]['cliente'] = cliente
+    if t['status'] == 'done':               unit_stats[camion]['done'] += 1
+    elif t['status'] in ('failed','delayed'): unit_stats[camion]['delayed'] += 1
+
+    # cli_stats: Top Clientes
+    cli = cliente or 'Sin cliente'
     destino = get_destino(t)
     if cli:
         cli_stats[cli]['count'] += 1
@@ -208,34 +219,50 @@ def unit_color(pct):
     if pct >= 50: return '#E65100'
     return '#C62828'
 
-# ── Fetch GPS stats por tracker ───────────────────────────────────────────────
-print('Obteniendo GPS stats por tracker...')
-tracker_gps = {}  # label -> {km, trips, avg_speed, hours}
+# ── Fetch lista de trackers → llenar tracker_id_to_label ─────────────────────
+print('Obteniendo lista de trackers...')
+all_trackers = []
 try:
     tr = requests.get(f'{NAVIXY_URL}/tracker/list', params={'hash': NAVIXY_HASH}, timeout=30)
     tr.raise_for_status()
-    tr_json = tr.json()
-    print(f'  tracker/list response success={tr_json.get("success")} status={tr_json.get("status")}')
-    all_trackers = tr_json.get('list', [])
-    print(f'  {len(all_trackers)} trackers encontrados')
+    all_trackers = tr.json().get('list', [])
     for tk in all_trackers:
-        tid = tk['id']
-        lbl = tk.get('label', str(tid))
-        try:
-            print(f'  Tracker {lbl} (id={tid})...')
-            stats = tracker_tracks(tid, from_str, to_str)
-            if stats:
-                tracker_gps[lbl] = stats
-                print(f'    -> km={stats["km"]} viajes={stats["trips"]}')
-            else:
-                print(f'    -> sin datos')
-        except Exception as e2:
-            print(f'    -> error: {e2}')
-        time.sleep(0.3)
-    print(f'  GPS stats: {len(tracker_gps)} trackers con datos')
+        tracker_id_to_label[tk['id']] = tk.get('label', str(tk['id']))
+    print(f'  {len(all_trackers)} trackers mapeados')
 except Exception as e:
     print(f'  Error listando trackers: {e}')
-    import traceback; traceback.print_exc()
+
+# ── Re-procesar unit_stats ahora que tenemos tracker_id_to_label ──────────────
+# (El loop anterior usó tracker_id_to_label vacío, re-hacemos unit_stats)
+unit_stats.clear()
+for t in active:
+    z = get_zone(t)
+    tid = t.get('tracker_id')
+    camion = tracker_id_to_label.get(tid, f'Tracker {tid}') if tid else 'Sin asignar'
+    cliente = t.get('label','Sin cliente').strip()
+    unit_stats[camion]['zone'] = z
+    unit_stats[camion]['cliente'] = cliente
+    if t['status'] == 'done':               unit_stats[camion]['done'] += 1
+    elif t['status'] in ('failed','delayed'): unit_stats[camion]['delayed'] += 1
+
+# ── Fetch GPS stats (km, viajes, velocidad) por tracker ──────────────────────
+print('Obteniendo GPS stats por tracker...')
+tracker_gps = {}  # label -> {km, trips, avg_speed, hours}
+for tk in all_trackers:
+    tid = tk['id']
+    lbl = tk.get('label', str(tid))
+    try:
+        print(f'  Tracker {lbl} (id={tid})...')
+        stats = tracker_tracks(tid, from_str, to_str)
+        if stats:
+            tracker_gps[lbl] = stats
+            print(f'    -> km={stats["km"]} viajes={stats["trips"]}')
+        else:
+            print(f'    -> sin datos')
+    except Exception as e2:
+        print(f'    -> error: {e2}')
+    time.sleep(0.3)
+print(f'  GPS stats: {len(tracker_gps)} trackers con datos')
 
 # taskList completo
 task_list_data = []
@@ -275,7 +302,8 @@ datos = {
     'trendDone':   [trend_stats[d]['done']  for d in sorted_trend],
     'trendDelay':  [trend_stats[d]['delay'] for d in sorted_trend],
     'trendUnass':  [trend_stats[d]['unass'] for d in sorted_trend],
-    'unitLabels':  sorted_units,
+    'unitLabels':   sorted_units,
+    'unitClientes': [unit_stats[u]['cliente'] for u in sorted_units],
     'unitDone':    [unit_stats[u]['done']    for u in sorted_units],
     'unitDelay':   [unit_stats[u]['delayed'] for u in sorted_units],
     'unitPct':     [unit_pct(u)             for u in sorted_units],
