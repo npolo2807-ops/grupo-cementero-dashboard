@@ -41,5 +41,5 @@ jobs:
           git config user.name  "Dashboard Bot"
           git config user.email "bot@npgservices.com"
           git add datos.json
-          git diff --staged --quiet || git commit -m "datos: actualizacion diaria"
-          git push
+                    git commit -m "datos: actualizacion diaria $(date -u '+%Y-%m-%d %H:%M')" || echo "Sin cambios"
+          git push || echo "Nada que pushear"
