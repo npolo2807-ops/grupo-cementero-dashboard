@@ -315,7 +315,6 @@ datos = {
     'trendDelay':  [trend_stats[d]['delay'] for d in sorted_trend],
     'trendUnass':  [trend_stats[d]['unass'] for d in sorted_trend],
     'unitLabels':   sorted_units,
-    'unitClientes': [unit_stats[u]['cliente'] for u in sorted_units],
     'unitDone':    [unit_stats[u]['done']    for u in sorted_units],
     'unitDelay':   [unit_stats[u]['delayed'] for u in sorted_units],
     'unitPct':     [unit_pct(u)             for u in sorted_units],
