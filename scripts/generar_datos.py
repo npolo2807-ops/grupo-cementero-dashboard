@@ -298,6 +298,7 @@ datos = {
     'zoneNames':   [ZONE_DISPLAY.get(z, z) for z in sorted_zones],
     'zoneDone':    [zone_stats[z]['done']    for z in sorted_zones],
     'zoneDelay':   [zone_stats[z]['delayed'] for z in sorted_zones],
+    'zoneTotals':  [zone_stats[z]['total']   for z in sorted_zones],
     'zoneColors':  [ZONE_COLORS.get(z,'#9E9E9E') for z in sorted_zones],
     'cliLabels':   sorted_cli,
     'cliDestinos': [cli_stats[c]['destino'] for c in sorted_cli],
