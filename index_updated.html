@@ -1188,8 +1188,8 @@ function _procesarTareas(tasks, trackerMap) {
   var zoneSt = {}, daySt = {}, unitSt = {}, cliSt = {}, trendSt = {};
   var VALID = {DAVID:1,CHITRE:1,AGUADULCE:1,TOCUMEN:1,CHORRERA:1};
 
+  // Procesar TODAS las tareas (con y sin tracker)
   tasks.forEach(function(t) {
-    if (!t.tracker_id) return;
     var z = _getZoneJS(t);
     if (!zoneSt[z]) zoneSt[z] = {done:0,delayed:0,total:0};
     zoneSt[z].total++;
@@ -1199,38 +1199,42 @@ function _procesarTareas(tasks, trackerMap) {
     var d = (t.from||'').slice(0,10);
     if (d) daySt[d] = (daySt[d]||0)+1;
 
-    var tid = t.tracker_id;
-    var camion = (trackerMap && trackerMap[tid]) ? trackerMap[tid] : ('Tracker '+tid);
+    // cli_stats: todos los clientes
     var cliente = (t.label||'Sin cliente').trim();
-    if (!unitSt[camion]) unitSt[camion] = {done:0,delayed:0,cliente:''};
-    unitSt[camion].cliente = cliente;
-    if (t.status==='done') unitSt[camion].done++;
-    else if (t.status==='failed'||t.status==='delayed') unitSt[camion].delayed++;
-
     var cli = cliente||'Sin cliente';
     var destino = _getDestinoJS(t);
-    if (!cliSt[cli]) cliSt[cli] = {count:0,destino:''};
-    cliSt[cli].count++;
-    if (!cliSt[cli].destino && destino) cliSt[cli].destino = destino;
+    if (cli && cli!=='Sin cliente') {
+      if (!cliSt[cli]) cliSt[cli] = {count:0,destino:''};
+      cliSt[cli].count++;
+      if (!cliSt[cli].destino && destino) cliSt[cli].destino = destino;
+    }
 
     var dk = d.slice(0,10);
     if (!trendSt[dk]) trendSt[dk] = {done:0,delay:0,unass:0};
     if (t.status==='done') trendSt[dk].done++;
     else if (t.status==='failed'||t.status==='delayed') trendSt[dk].delay++;
     else trendSt[dk].unass++;
+
+    // unit_stats: solo tareas con tracker
+    if (t.tracker_id) {
+      var tid = t.tracker_id;
+      var camion = (trackerMap && trackerMap[tid]) ? trackerMap[tid] : ('Tracker '+tid);
+      if (!unitSt[camion]) unitSt[camion] = {done:0,delayed:0};
+      if (t.status==='done') unitSt[camion].done++;
+      else if (t.status==='failed'||t.status==='delayed') unitSt[camion].delayed++;
+    }
   });
 
-  var activeTasks = tasks.filter(function(t){ return !!t.tracker_id; });
-  var total=activeTasks.length, done=0, delayed=0;
-  activeTasks.forEach(function(t){
+  var total=tasks.length, done=0, delayed=0;
+  tasks.forEach(function(t){
     if(t.status==='done') done++;
     else if(t.status==='failed'||t.status==='delayed') delayed++;
   });
   var pct = total>0 ? Math.round(done/total*100) : 0;
 
   var sortedZones = ZONE_ORDER_JS.filter(function(z){ return zoneSt[z]; });
-  var sortedUnits = Object.keys(unitSt).sort(function(a,b){ return (unitSt[b].done+unitSt[b].delayed)-(unitSt[a].done+unitSt[a].delayed); }).slice(0,15);
-  var sortedCli   = Object.keys(cliSt).sort(function(a,b){ return cliSt[b].count-cliSt[a].count; }).slice(0,12);
+  var sortedUnits = Object.keys(unitSt).sort(function(a,b){ return (unitSt[b].done+unitSt[b].delayed)-(unitSt[a].done+unitSt[a].delayed); });
+  var sortedCli   = Object.keys(cliSt).sort(function(a,b){ return cliSt[b].count-cliSt[a].count; }).slice(0,60);
   var sortedDays  = Object.keys(daySt).sort();
   var sortedTrend = Object.keys(trendSt).sort();
 
@@ -1259,7 +1263,6 @@ function _procesarTareas(tasks, trackerMap) {
     zoneTotals:  sortedZones.map(function(z){ return zoneSt[z].total; }),
     zoneColors:  sortedZones.map(function(z){ return ZONE_COLORS_JS[z]||'#9E9E9E'; }),
     unitLabels:   sortedUnits,
-    unitClientes: sortedUnits.map(function(u){ return unitSt[u].cliente; }),
     unitDone:     sortedUnits.map(function(u){ return unitSt[u].done; }),
     unitDelay:    sortedUnits.map(function(u){ return unitSt[u].delayed; }),
     unitPct:      sortedUnits.map(function(u){ return uPct(u); }),
