@@ -191,8 +191,8 @@ tbody td{padding:8px 12px;border-bottom:1px solid #eee;vertical-align:middle}
     <table>
       <thead><tr>
         <th style="width:50px">#</th>
-        <th>Unidad</th>
-        <th>Zona</th>
+        <th>Unidad (Camión)</th>
+        <th>Cliente</th>
         <th>✓ Hechas</th>
         <th>⏰ Demoradas</th>
         <th>Total</th>
@@ -269,7 +269,8 @@ tbody td{padding:8px 12px;border-bottom:1px solid #eee;vertical-align:middle}
     <h2>🚛 Cumplimiento por Unidad</h2>
     <table>
       <thead><tr>
-        <th>Unidad</th>
+        <th>Unidad (Camión)</th>
+        <th>Cliente</th>
         <th style="text-align:center">✓ Completadas</th>
         <th style="text-align:center">⏰ Demoradas</th>
         <th style="text-align:center">Total</th>
@@ -732,14 +733,14 @@ function _renderDatos(d) {
     // Rebuild unit ranking table (Productividad tab)
     const trBody = document.getElementById('tbodyUnitsRanking');
     if (trBody && d.unitLabels && d.unitLabels.length) {
-      const sorted = d.unitLabels.map((lbl,i) => ({lbl, done: d.unitDone[i]||0, delay: d.unitDelay[i]||0, pct: d.unitPct[i]||0, color: d.unitColors[i]||'#9E9E9E'}))
+      const sorted = d.unitLabels.map((lbl,i) => ({lbl, cliente: (d.unitClientes && d.unitClientes[i]) || '—', done: d.unitDone[i]||0, delay: d.unitDelay[i]||0, pct: d.unitPct[i]||0, color: d.unitColors[i]||'#9E9E9E'}))
         .sort((a,b) => b.done - a.done);
       trBody.innerHTML = sorted.map((u,i) => {
         const tot = u.done + u.delay;
         return '<tr style="background:' + (i%2===0?'#fafafa':'#fff') + '">'
           + '<td style="text-align:center;color:#888">' + (i+1) + '</td>'
           + '<td><b>' + u.lbl + '</b></td>'
-          + '<td>—</td>'
+          + '<td style="color:#555;font-size:12px">' + u.cliente + '</td>'
           + '<td style="text-align:center;color:#2E7D32;font-weight:bold">' + u.done + '</td>'
           + '<td style="text-align:center;color:#E65100">' + u.delay + '</td>'
           + '<td style="text-align:center">' + tot + '</td>'
@@ -775,12 +776,13 @@ function _renderDatos(d) {
     // Rebuild unit cumplimiento table
     const ucBody = document.getElementById('tbodyCumplUnit');
     if (ucBody && d.unitLabels && d.unitLabels.length) {
-      const sorted2 = d.unitLabels.map((lbl,i) => ({lbl, done: d.unitDone[i]||0, delay: d.unitDelay[i]||0, pct: d.unitPct[i]||0, color: d.unitColors[i]||'#9E9E9E'}))
+      const sorted2 = d.unitLabels.map((lbl,i) => ({lbl, cliente: (d.unitClientes && d.unitClientes[i]) || '—', done: d.unitDone[i]||0, delay: d.unitDelay[i]||0, pct: d.unitPct[i]||0, color: d.unitColors[i]||'#9E9E9E'}))
         .sort((a,b) => b.pct - a.pct);
       ucBody.innerHTML = sorted2.map((u,i) => {
         const tot = u.done + u.delay;
         return '<tr style="background:' + (i%2===0?'#fafafa':'#fff') + '">'
           + '<td><b>' + u.lbl + '</b></td>'
+          + '<td style="color:#555;font-size:12px">' + u.cliente + '</td>'
           + '<td style="text-align:center;color:#2E7D32;font-weight:bold">' + u.done + '</td>'
           + '<td style="text-align:center;color:#E65100">' + u.delay + '</td>'
           + '<td style="text-align:center">' + tot + '</td>'
