@@ -3,7 +3,9 @@
 Grupo Cementero — Generador de datos.json
 Corre diariamente vía GitHub Actions. No requiere PC encendida.
 """
-import json, os, sys, time
+import json, os, sys, time, smtplib, traceback
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 from datetime import date, timedelta
 from collections import defaultdict
 
@@ -13,6 +15,46 @@ except ImportError:
     import subprocess
     subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'requests', '-q'])
     import requests
+
+def enviar_alerta_error(paso, error_msg):
+    """Manda email de alerta si falla algo crítico."""
+    try:
+        gmail_user = os.environ.get('GMAIL_USER', '')
+        gmail_pass = os.environ.get('GMAIL_APP_PASS', '')
+        email_cc   = os.environ.get('EMAIL_CC', 'npolo2807@gmail.com')
+        if not gmail_user or not gmail_pass:
+            print('⚠ Sin credenciales Gmail — no se pudo enviar alerta')
+            return
+        fecha_hoy = date.today().isoformat()
+        subject = f'🚨 ERROR Dashboard Grupo Cementero — {fecha_hoy}'
+        html = f"""<!DOCTYPE html>
+<html><body style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;color:#333;">
+  <div style="background:#b71c1c;padding:16px 20px;border-radius:8px 8px 0 0;">
+    <div style="color:white;font-size:17px;font-weight:bold;">🚨 Error en el dashboard diario</div>
+    <div style="color:#ffcdd2;font-size:12px;margin-top:4px;">{fecha_hoy}</div>
+  </div>
+  <div style="background:#fff3f3;border:1px solid #ffcdd2;border-top:none;border-radius:0 0 8px 8px;padding:20px;">
+    <p style="margin:0 0 12px;"><strong>Paso donde falló:</strong> {paso}</p>
+    <pre style="background:#f5f5f5;border:1px solid #ddd;border-radius:4px;padding:12px;
+                font-size:12px;overflow:auto;white-space:pre-wrap;">{error_msg}</pre>
+    <p style="margin:16px 0 0;font-size:13px;color:#666;">
+      El dashboard puede estar mostrando datos desactualizados.<br>
+      Revisa el log completo en:
+      <a href="https://github.com/npolo2807-ops/grupo-cementero-dashboard/actions">GitHub Actions</a>
+    </p>
+  </div>
+</body></html>"""
+        msg = MIMEMultipart('alternative')
+        msg['Subject'] = subject
+        msg['From']    = gmail_user
+        msg['To']      = email_cc
+        msg.attach(MIMEText(html, 'html'))
+        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
+            smtp.login(gmail_user, gmail_pass)
+            smtp.sendmail(gmail_user, [email_cc], msg.as_string())
+        print(f'📧 Alerta de error enviada a {email_cc}')
+    except Exception as e2:
+        print(f'⚠ No se pudo enviar alerta: {e2}')
 
 # ── Credenciales desde GitHub Secrets ────────────────────────────────────────
 NAVIXY_HASH = os.environ['NAVIXY_HASH']
@@ -119,9 +161,10 @@ to_str   = f'{FECHA_ISO} 23:59:59'
 print(f'Fecha: {FECHA_LARGA}  |  Período: {PERIODO}')
 
 # ── Fetch tareas del mes ──────────────────────────────────────────────────────
-print('Obteniendo count...')
-r0 = task_list(0, 1, from_str, to_str)
-count = r0.get('count', 0)
+try:
+    print('Obteniendo count...')
+    r0 = task_list(0, 1, from_str, to_str)
+    count = r0.get('count', 0)
 batches = (count + 99) // 100
 print(f'Total tareas mes: {count}  |  Lotes: {batches}')
 
@@ -325,7 +368,13 @@ datos = {
     'gpsStats':    tracker_gps,
 }
 
-with open('datos.json', 'w', encoding='utf-8') as f:
-    json.dump(datos, f, ensure_ascii=False)
+    with open('datos.json', 'w', encoding='utf-8') as f:
+        json.dump(datos, f, ensure_ascii=False)
 
-print(f'✅ datos.json generado — {len(task_list_data)} tareas en taskList')
+    print(f'✅ datos.json generado — {len(task_list_data)} tareas en taskList')
+
+except Exception as e:
+    tb = traceback.format_exc()
+    print(f'❌ ERROR CRÍTICO: {e}\n{tb}')
+    enviar_alerta_error('Generación de datos.json (fetch Navixy o procesamiento)', tb)
+    sys.exit(1)
