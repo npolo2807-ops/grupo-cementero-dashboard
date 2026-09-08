@@ -328,13 +328,12 @@ tbody td{padding:8px 12px;border-bottom:1px solid #eee;vertical-align:middle}
     <table>
       <thead><tr>
         <th>Cliente</th>
-        <th>Destino</th>
         <th>Zona</th>
         <th>✓ Completadas</th>
         <th>⏰ Demoradas</th>
         <th>Total</th>
       </tr></thead>
-      <tbody id="tbodyFlota"><tr><td colspan="6" style="text-align:center;color:#888;padding:12px">Sin datos disponibles</td></tr></tbody>
+      <tbody id="tbodyFlota"><tr><td colspan="5" style="text-align:center;color:#888;padding:12px">Sin datos disponibles</td></tr></tbody>
     </table>
   </div>
 </div>
@@ -807,17 +806,15 @@ function _renderDatos(d) {
       if (el('gauge-center-pct')) el('gauge-center-pct').textContent = pct2 + '%';
     }
 
-    // Rebuild Flota de Vehículos — Cliente + Destino + Zona desde taskList
+    // Rebuild Flota de Vehículos — Cliente + Zona desde taskList
     const fbody = document.getElementById('tbodyFlota');
     if (fbody && d.taskList && d.taskList.length) {
-      // Agrupar por cliente (label)
       var cliMap = {};
       d.taskList.forEach(function(t) {
         var key = t.label || 'Sin asignar';
-        if (!cliMap[key]) cliMap[key] = {done:0, delay:0, destino: t.destino||'—', zone: t.zone||'—'};
+        if (!cliMap[key]) cliMap[key] = {done:0, delay:0, zone: t.zone||'—'};
         if (t.status === 'done') cliMap[key].done++;
         else if (t.status === 'failed' || t.status === 'delayed') cliMap[key].delay++;
-        if (!cliMap[key].destino && t.destino) cliMap[key].destino = t.destino;
       });
       var sorted3 = Object.keys(cliMap).map(function(k){ return Object.assign({lbl:k}, cliMap[k]); })
         .sort(function(a,b){ return (b.done+b.delay)-(a.done+a.delay); }).slice(0,20);
@@ -827,7 +824,6 @@ function _renderDatos(d) {
         var col = pct>=90?'#2E7D32':pct>=70?'#F57F17':'#C62828';
         return '<tr style="background:' + (i%2===0?'#fafafa':'#fff') + '">'
           + '<td><b>' + u.lbl + '</b></td>'
-          + '<td style="color:#555;font-size:12px">' + (u.destino||'—') + '</td>'
           + '<td><span class="badge" style="background:#546E7A">' + (u.zone||'—') + '</span></td>'
           + '<td style="text-align:center;color:#2E7D32;font-weight:bold">' + u.done + '</td>'
           + '<td style="text-align:center;color:#E65100">' + u.delay + '</td>'
