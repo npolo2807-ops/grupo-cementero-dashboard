@@ -383,8 +383,8 @@ tbody td{padding:8px 12px;border-bottom:1px solid #eee;vertical-align:middle}
     </div>
     <table id="tablaTaskas">
       <thead><tr>
-        <th>Cliente / Unidad</th>
-        <th>Destino</th>
+        <th>Empleado</th>
+        <th>Cliente</th>
         <th>Fecha</th>
         <th>Llegada</th>
         <th>Estado</th>
@@ -918,8 +918,8 @@ function _renderDatos(d) {
               ? '<span style="color:#E65100;font-weight:bold">⏰ Demorada</span>'
               : '<span style="color:#888">— Sin asignar</span>';
             html += '<tr style="background:'+(i%2===0?'#fafafa':'#fff')+'">'
-              + '<td><b>'+t.label+'</b></td>'
-              + '<td><small style="color:#555">'+(t.destino||'—')+'</small></td>'
+              + '<td><b>'+(t.empleado||'Sin asignar')+'</b></td>'
+              + '<td><small style="color:#555">'+t.label+'</small></td>'
               + '<td style="text-align:center;white-space:nowrap">'+t.date+'</td>'
               + '<td style="text-align:center">—</td>'
               + '<td>'+badge+'</td></tr>';
