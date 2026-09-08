@@ -19,16 +19,29 @@ NAVIXY_HASH = os.environ['NAVIXY_HASH']
 NAVIXY_URL  = 'https://api.navixy.com/v2'
 
 TRACKER_ZONES = {408346:'DAVID',1048369:'CHITRE',1051266:'AGUADULCE',1669379:'TOCUMEN'}
+
+# Grupos válidos — solo estos 6 aparecen en el dashboard
+VALID_ZONES = {'DAVID', 'CHITRE', 'AGUADULCE', 'TOCUMEN', 'CHORRERA', 'PORTATIL'}
+
+# Nombres de visualización para el dashboard
+ZONE_DISPLAY = {
+    'DAVID':'David','CHITRE':'Chitre','AGUADULCE':'Agua Dulce',
+    'TOCUMEN':'Tocumen','CHORRERA':'Chorrera','PORTATIL':'Portátil',
+}
+
 GEO_ZONES = {
     'david':'DAVID','chiriqui':'DAVID','chitre':'CHITRE','chitré':'CHITRE',
-    'aguadulce':'AGUADULCE','tocumen':'TOCUMEN','chorrera':'CHORRERA',
-    'la chorrera':'CHORRERA','colon':'COLON','colón':'COLON',
-    'arraijan':'ARRAIJAN','arraiján':'ARRAIJAN','santiago':'SANTIAGO','divisa':'DIVISA'
+    'aguadulce':'AGUADULCE','agua dulce':'AGUADULCE',
+    'tocumen':'TOCUMEN','chorrera':'CHORRERA','la chorrera':'CHORRERA',
+    'portatil':'PORTATIL','portátil':'PORTATIL','portable':'PORTATIL',
+    # Zonas que antes aparecían sueltas → ahora las absorbemos en CHORRERA
+    'colon':'CHORRERA','colón':'CHORRERA','arraijan':'CHORRERA',
+    'arraiján':'CHORRERA','santiago':'CHITRE','divisa':'CHITRE',
+    'panama':'TOCUMEN','panamá':'TOCUMEN',
 }
 ZONE_COLORS = {
-    'DAVID':'#F44336','TOCUMEN':'#FF9800','CHITRE':'#009688','CHORRERA':'#8BC34A',
-    'AGUADULCE':'#3F51B5','COLON':'#9C27B0','ARRAIJAN':'#795548',
-    'SANTIAGO':'#607D8B','DIVISA':'#FF5722','PANAMA':'#9E9E9E'
+    'DAVID':'#F44336','TOCUMEN':'#FF9800','CHITRE':'#009688',
+    'CHORRERA':'#8BC34A','AGUADULCE':'#3F51B5','PORTATIL':'#9C27B0',
 }
 
 def get_zone(t):
@@ -127,8 +140,16 @@ print(f'Activas: {TOTAL}  |  Done: {DONE}  |  Delayed: {DELAYED}  |  PCT: {PCT}%
 zone_stats = defaultdict(lambda: {'done':0,'delayed':0,'total':0})
 day_stats  = defaultdict(int)
 unit_stats = defaultdict(lambda: {'done':0,'delayed':0,'zone':'CHORRERA'})
-cli_stats  = defaultdict(int)
+# cli_stats: {cliente: {'count':0, 'destino': str}}
+cli_stats  = defaultdict(lambda: {'count':0,'destino':''})
 trend_stats = defaultdict(lambda: {'done':0,'delay':0,'unass':0})
+
+def get_destino(t):
+    """Extrae el nombre del destino de location.address (parte antes del //)."""
+    addr = (t.get('location') or {}).get('address', '') or ''
+    if '//' in addr:
+        return addr.split('//')[0].strip()
+    return addr.strip()
 
 for t in active:
     z = get_zone(t)
@@ -141,8 +162,13 @@ for t in active:
     unit_stats[lbl]['zone'] = z
     if t['status'] == 'done':               unit_stats[lbl]['done'] += 1
     elif t['status'] in ('failed','delayed'): unit_stats[lbl]['delayed'] += 1
-    cli = ((t.get('location') or {}).get('description') or t.get('description','Sin cliente')).strip()
-    if cli: cli_stats[cli] += 1
+    # Cliente = label, Destino = parte antes del // en address
+    cli = lbl.strip() or 'Sin cliente'
+    destino = get_destino(t)
+    if cli:
+        cli_stats[cli]['count'] += 1
+        if not cli_stats[cli]['destino'] and destino:
+            cli_stats[cli]['destino'] = destino
 
 for t in all_tasks.values():
     d = (t.get('from','') or '')[:10]
@@ -159,9 +185,11 @@ while d_iter <= today:
     sorted_days.append(d_iter.isoformat())
     d_iter += timedelta(days=1)
 
-sorted_zones  = sorted(zone_stats.keys())
+# Solo los 6 grupos válidos, en orden fijo
+ZONE_ORDER = ['DAVID','CHITRE','AGUADULCE','TOCUMEN','CHORRERA','PORTATIL']
+sorted_zones = [z for z in ZONE_ORDER if z in zone_stats]
 sorted_units  = sorted(unit_stats.keys(), key=lambda u: -(unit_stats[u]['done']+unit_stats[u]['delayed']))[:15]
-sorted_cli    = sorted(cli_stats.keys(), key=lambda c: -cli_stats[c])[:12]
+sorted_cli    = sorted(cli_stats.keys(), key=lambda c: -cli_stats[c]['count'])[:12]
 sorted_trend  = sorted(trend_stats.keys())
 
 def unit_pct(u):
@@ -198,16 +226,16 @@ except Exception as e:
 task_list_data = []
 for t in sorted(all_tasks.values(), key=lambda x: x.get('from','') or ''):
     loc = t.get('location') or {}
-    client = (loc.get('description') or t.get('description','')).strip() or 'Sin cliente'
+    gz = get_zone(t)
     task_list_data.append({
-        'label':  t.get('label','Sin asignar'),
-        'client': client,
-        'date':   (t.get('from','') or '')[:10],
-        'status': t['status'],
-        'zone':   get_zone(t),
-        'color':  ZONE_COLORS.get(get_zone(t), '#9E9E9E'),
-        'lat':    loc.get('lat') or 0,
-        'lng':    loc.get('lng') or 0,
+        'label':   t.get('label','Sin asignar'),
+        'destino': get_destino(t),
+        'date':    (t.get('from','') or '')[:10],
+        'status':  t['status'],
+        'zone':    ZONE_DISPLAY.get(gz, gz),
+        'color':   ZONE_COLORS.get(gz, '#9E9E9E'),
+        'lat':     loc.get('lat') or 0,
+        'lng':     loc.get('lng') or 0,
     })
 
 datos = {
@@ -221,12 +249,13 @@ datos = {
     },
     'diasLabels':  [d[5:] for d in sorted_days],
     'diasVals':    [day_stats.get(d, 0) for d in sorted_days],
-    'zoneNames':   sorted_zones,
+    'zoneNames':   [ZONE_DISPLAY.get(z, z) for z in sorted_zones],
     'zoneDone':    [zone_stats[z]['done']    for z in sorted_zones],
     'zoneDelay':   [zone_stats[z]['delayed'] for z in sorted_zones],
     'zoneColors':  [ZONE_COLORS.get(z,'#9E9E9E') for z in sorted_zones],
     'cliLabels':   sorted_cli,
-    'cliVals':     [cli_stats[c] for c in sorted_cli],
+    'cliDestinos': [cli_stats[c]['destino'] for c in sorted_cli],
+    'cliVals':     [cli_stats[c]['count'] for c in sorted_cli],
     'trendLabels': [d[5:] for d in sorted_trend],
     'trendDone':   [trend_stats[d]['done']  for d in sorted_trend],
     'trendDelay':  [trend_stats[d]['delay'] for d in sorted_trend],
