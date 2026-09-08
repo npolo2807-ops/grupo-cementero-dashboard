@@ -67,7 +67,7 @@ def tracker_tracks(tracker_id, from_str, to_str):
     """Fetch track list summary for a tracker. Returns total km, trips, hours."""
     try:
         # Construir URL manualmente para evitar que requests encodee los : de la fecha
-        url = (f'{NAVIXY_URL}/tracker/track/list'
+        url = (f'{NAVIXY_URL}/track/list'
                f'?hash={NAVIXY_HASH}&tracker_id={tracker_id}'
                f'&from={from_str}&to={to_str}&limit=10000')
         r = requests.get(url, timeout=30)
@@ -232,7 +232,6 @@ try:
         except Exception as e2:
             print(f'    -> error: {e2}')
         time.sleep(0.3)
-        break  # solo probar con el primer tracker para diagnóstico
     print(f'  GPS stats: {len(tracker_gps)} trackers con datos')
 except Exception as e:
     print(f'  Error listando trackers: {e}')
