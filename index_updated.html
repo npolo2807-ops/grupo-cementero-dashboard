@@ -1241,7 +1241,7 @@ function _procesarTareas(tasks, trackerMap) {
   function uPct(u){ var tot=unitSt[u].done+unitSt[u].delayed; return tot>0?Math.round(unitSt[u].done/tot*100):0; }
   function uCol(p){ return p>=90?'#8BC34A':p>=70?'#FF9800':p>=50?'#E65100':'#C62828'; }
 
-  var taskListData = activeTasks.map(function(t){
+  var taskListData = tasks.map(function(t){
     var gz = _getZoneJS(t);
     return {
       label: t.label||'Sin asignar',
