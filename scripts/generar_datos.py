@@ -106,8 +106,8 @@ MES_PREFIX = today.strftime('%Y-%m')
 FECHA_ISO  = today.isoformat()
 FECHA_LARGA = f'{today.day} de {meses[today.month-1]} de {today.year}'
 PERIODO = f'1 {meses_corto[today.month-1]} – {today.day} {meses_corto[today.month-1]} {today.year}'
-from_str = f'{MES_PREFIX}-01 00:00:00'
-to_str   = f'{FECHA_ISO} 23:59:59'
+from_str = f'{MES_PREFIX}-01T00:00:00'
+to_str   = f'{FECHA_ISO}T23:59:59'
 
 print(f'Fecha: {FECHA_LARGA}  |  Período: {PERIODO}')
 
