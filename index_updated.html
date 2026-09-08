@@ -1296,13 +1296,19 @@ async function _fetchNavixyTareas(desde, hasta) {
   // 2. Fetch all tasks paginated
   var allTasks = [];
   var countResp = await fetch(NAVIXY_URL+'/task/list?hash='+NAVIXY_HASH+'&limit=1&offset=0&from='+encodeURIComponent(fromStr)+'&to='+encodeURIComponent(toStr));
+  if (!countResp.ok) throw new Error('HTTP '+countResp.status+' al obtener count');
   var countData = await countResp.json();
+  if (!countData.success) throw new Error('Navixy error: '+(countData.status||JSON.stringify(countData)));
   var total = countData.count||0;
+  console.log('Navixy total tareas:', total, 'período:', fromStr, '->', toStr);
   var batches = Math.ceil(total/100);
   for (var i=0; i<batches; i++) {
     var resp = await fetch(NAVIXY_URL+'/task/list?hash='+NAVIXY_HASH+'&limit=100&offset='+(i*100)+'&from='+encodeURIComponent(fromStr)+'&to='+encodeURIComponent(toStr));
+    if (!resp.ok) throw new Error('HTTP '+resp.status+' en lote '+(i+1));
     var data = await resp.json();
+    if (!data.success) throw new Error('Navixy error lote '+(i+1)+': '+(data.status||''));
     (data.list||[]).forEach(function(t){ allTasks.push(t); });
+    console.log('Lote '+(i+1)+'/'+batches+': '+( data.list||[]).length+' tareas');
   }
 
   return _procesarTareas(allTasks, trackerMap);
