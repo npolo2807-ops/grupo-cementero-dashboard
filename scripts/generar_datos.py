@@ -136,12 +136,15 @@ for i in range(batches):
 print(f'Tareas únicas del mes: {len(all_tasks)}')
 
 # ── Procesar ──────────────────────────────────────────────────────────────────
-active = [t for t in all_tasks.values() if t.get('tracker_id')]
-TOTAL   = len(active)
-DONE    = sum(1 for t in active if t['status'] == 'done')
-DELAYED = sum(1 for t in active if t['status'] in ('failed', 'delayed'))
+# Incluir TODAS las tareas (con y sin tracker) para conteo de clientes y zonas
+all_active = list(all_tasks.values())
+# Solo las que tienen tracker para unit_stats (camiones)
+active = [t for t in all_active if t.get('tracker_id')]
+TOTAL   = len(all_active)
+DONE    = sum(1 for t in all_active if t['status'] == 'done')
+DELAYED = sum(1 for t in all_active if t['status'] in ('failed', 'delayed'))
 PCT     = round(DONE / TOTAL * 100, 1) if TOTAL else 0
-print(f'Activas: {TOTAL}  |  Done: {DONE}  |  Delayed: {DELAYED}  |  PCT: {PCT}%')
+print(f'Total: {TOTAL}  |  Done: {DONE}  |  Delayed: {DELAYED}  |  PCT: {PCT}%  |  Con tracker: {len(active)}')
 
 zone_stats = defaultdict(lambda: {'done':0,'delayed':0,'total':0})
 day_stats  = defaultdict(int)
@@ -162,7 +165,7 @@ def get_destino(t):
         return addr.split('//')[0].strip()
     return addr.strip()
 
-for t in active:
+for t in all_active:
     z = get_zone(t)
     zone_stats[z]['total'] += 1
     if t['status'] == 'done':               zone_stats[z]['done'] += 1
@@ -170,22 +173,23 @@ for t in active:
     d = (t.get('from','') or '')[:10]
     if d: day_stats[d] += 1
 
-    # Unidad = nombre del camión (tracker), Cliente = label de la tarea
-    tid = t.get('tracker_id')
-    camion = tracker_id_to_label.get(tid, f'Tracker {tid}') if tid else 'Sin asignar'
+    # cli_stats: Top Clientes (todas las tareas, con o sin tracker)
     cliente = t.get('label','Sin cliente').strip()
-    unit_stats[camion]['zone'] = z
-    unit_stats[camion]['cliente'] = cliente
-    if t['status'] == 'done':               unit_stats[camion]['done'] += 1
-    elif t['status'] in ('failed','delayed'): unit_stats[camion]['delayed'] += 1
-
-    # cli_stats: Top Clientes
     cli = cliente or 'Sin cliente'
     destino = get_destino(t)
-    if cli:
+    if cli and cli != 'Sin cliente':
         cli_stats[cli]['count'] += 1
         if not cli_stats[cli]['destino'] and destino:
             cli_stats[cli]['destino'] = destino
+
+# unit_stats: solo tareas con tracker (camiones)
+for t in active:
+    z = get_zone(t)
+    tid = t.get('tracker_id')
+    camion = tracker_id_to_label.get(tid, f'Tracker {tid}') if tid else 'Sin asignar'
+    unit_stats[camion]['zone'] = z
+    if t['status'] == 'done':               unit_stats[camion]['done'] += 1
+    elif t['status'] in ('failed','delayed'): unit_stats[camion]['delayed'] += 1
 
 for t in all_tasks.values():
     d = (t.get('from','') or '')[:10]
@@ -273,15 +277,18 @@ task_list_data = []
 for t in sorted(all_tasks.values(), key=lambda x: x.get('from','') or ''):
     loc = t.get('location') or {}
     gz = get_zone(t)
+    tid = t.get('tracker_id')
+    empleado = tracker_id_to_label.get(tid, 'Sin asignar') if tid else 'Sin asignar'
     task_list_data.append({
-        'label':   t.get('label','Sin asignar'),
-        'destino': get_destino(t),
-        'date':    (t.get('from','') or '')[:10],
-        'status':  t['status'],
-        'zone':    ZONE_DISPLAY.get(gz, gz),
-        'color':   ZONE_COLORS.get(gz, '#9E9E9E'),
-        'lat':     loc.get('lat') or 0,
-        'lng':     loc.get('lng') or 0,
+        'label':    t.get('label','Sin asignar'),
+        'empleado': empleado,
+        'destino':  get_destino(t),
+        'date':     (t.get('from','') or '')[:10],
+        'status':   t['status'],
+        'zone':     ZONE_DISPLAY.get(gz, gz),
+        'color':    ZONE_COLORS.get(gz, '#9E9E9E'),
+        'lat':      loc.get('lat') or 0,
+        'lng':      loc.get('lng') or 0,
     })
 
 datos = {
