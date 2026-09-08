@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Envía el email diario de resumen del dashboard."""
-import json, os, smtplib
+import json, os, sys, smtplib, traceback
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from datetime import date
@@ -10,21 +10,58 @@ GMAIL_APP_PASS = os.environ['GMAIL_APP_PASS']
 EMAIL_TO       = os.environ.get('EMAIL_TO', 'manuelpolo@npgservices.com')
 EMAIL_CC       = os.environ.get('EMAIL_CC', 'npolo2807@gmail.com')
 
-# Leer datos generados
-with open('datos.json', encoding='utf-8') as f:
-    d = json.load(f)
+def enviar_alerta_error(paso, error_msg):
+    """Manda email de alerta si falla algo crítico."""
+    try:
+        if not GMAIL_USER or not GMAIL_APP_PASS:
+            return
+        fecha_hoy = date.today().isoformat()
+        subject = f'🚨 ERROR Dashboard Grupo Cementero — {fecha_hoy}'
+        html = f"""<!DOCTYPE html>
+<html><body style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;color:#333;">
+  <div style="background:#b71c1c;padding:16px 20px;border-radius:8px 8px 0 0;">
+    <div style="color:white;font-size:17px;font-weight:bold;">🚨 Error en el dashboard diario</div>
+    <div style="color:#ffcdd2;font-size:12px;margin-top:4px;">{fecha_hoy}</div>
+  </div>
+  <div style="background:#fff3f3;border:1px solid #ffcdd2;border-top:none;border-radius:0 0 8px 8px;padding:20px;">
+    <p style="margin:0 0 12px;"><strong>Paso donde falló:</strong> {paso}</p>
+    <pre style="background:#f5f5f5;border:1px solid #ddd;border-radius:4px;padding:12px;
+                font-size:12px;overflow:auto;white-space:pre-wrap;">{error_msg}</pre>
+    <p style="margin:16px 0 0;font-size:13px;color:#666;">
+      Es posible que el email de resumen no haya llegado hoy.<br>
+      Revisa el log completo en:
+      <a href="https://github.com/npolo2807-ops/grupo-cementero-dashboard/actions">GitHub Actions</a>
+    </p>
+  </div>
+</body></html>"""
+        msg = MIMEMultipart('alternative')
+        msg['Subject'] = subject
+        msg['From']    = GMAIL_USER
+        msg['To']      = EMAIL_CC
+        msg.attach(MIMEText(html, 'html'))
+        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
+            smtp.login(GMAIL_USER, GMAIL_APP_PASS)
+            smtp.sendmail(GMAIL_USER, [EMAIL_CC], msg.as_string())
+        print(f'📧 Alerta de error enviada a {EMAIL_CC}')
+    except Exception as e2:
+        print(f'⚠ No se pudo enviar alerta: {e2}')
 
-kpi = d['kpi']
-TOTAL    = kpi['total']
-DONE     = kpi['done']
-DELAYED  = kpi['delayed']
-PCT      = kpi['pct']
-FECHA    = d['fecha']
-PERIODO  = d['periodo']
+try:
+    # Leer datos generados
+    with open('datos.json', encoding='utf-8') as f:
+        d = json.load(f)
 
-subject = f"Informe diario — {FECHA} | Grupo Cementero"
+    kpi = d['kpi']
+    TOTAL    = kpi['total']
+    DONE     = kpi['done']
+    DELAYED  = kpi['delayed']
+    PCT      = kpi['pct']
+    FECHA    = d['fecha']
+    PERIODO  = d['periodo']
 
-html = f"""<!DOCTYPE html>
+    subject = f"Informe diario — {FECHA} | Grupo Cementero"
+
+    html = f"""<!DOCTYPE html>
 <html>
 <body style="font-family:Arial,sans-serif;max-width:620px;margin:0 auto;padding:20px;color:#333;">
   <div style="background:#1a237e;padding:20px 24px;border-radius:8px 8px 0 0;">
@@ -69,15 +106,21 @@ html = f"""<!DOCTYPE html>
 </body>
 </html>"""
 
-msg = MIMEMultipart('alternative')
-msg['Subject'] = subject
-msg['From']    = GMAIL_USER
-msg['To']      = EMAIL_TO
-msg['Cc']      = EMAIL_CC
-msg.attach(MIMEText(html, 'html'))
+    msg = MIMEMultipart('alternative')
+    msg['Subject'] = subject
+    msg['From']    = GMAIL_USER
+    msg['To']      = EMAIL_TO
+    msg['Cc']      = EMAIL_CC
+    msg.attach(MIMEText(html, 'html'))
 
-with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
-    smtp.login(GMAIL_USER, GMAIL_APP_PASS)
-    smtp.sendmail(GMAIL_USER, [EMAIL_TO, EMAIL_CC], msg.as_string())
+    with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
+        smtp.login(GMAIL_USER, GMAIL_APP_PASS)
+        smtp.sendmail(GMAIL_USER, [EMAIL_TO, EMAIL_CC], msg.as_string())
 
-print(f'✅ Email enviado a {EMAIL_TO}, CC {EMAIL_CC}')
+    print(f'✅ Email enviado a {EMAIL_TO}, CC {EMAIL_CC}')
+
+except Exception as e:
+    tb = traceback.format_exc()
+    print(f'❌ ERROR al enviar email: {e}\n{tb}')
+    enviar_alerta_error('Envío de email diario (enviar_email.py)', tb)
+    sys.exit(1)
