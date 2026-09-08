@@ -193,7 +193,6 @@ tbody td{padding:8px 12px;border-bottom:1px solid #eee;vertical-align:middle}
       <thead><tr>
         <th style="width:50px">#</th>
         <th>Unidad (Camión)</th>
-        <th>Cliente</th>
         <th>✓ Hechas</th>
         <th>⏰ Demoradas</th>
         <th>Total</th>
@@ -271,7 +270,6 @@ tbody td{padding:8px 12px;border-bottom:1px solid #eee;vertical-align:middle}
     <table>
       <thead><tr>
         <th>Unidad (Camión)</th>
-        <th>Cliente</th>
         <th style="text-align:center">✓ Completadas</th>
         <th style="text-align:center">⏰ Demoradas</th>
         <th style="text-align:center">Total</th>
@@ -292,8 +290,8 @@ tbody td{padding:8px 12px;border-bottom:1px solid #eee;vertical-align:middle}
   <div class="card">
     <h2>📋 Top Clientes por Entregas Completadas</h2>
     <table>
-      <thead><tr><th>#</th><th>Cliente</th><th>Destino</th><th>Completadas</th><th>Demoradas</th><th>Proporción</th></tr></thead>
-      <tbody id="tbodyCliDetalle"><tr><td colspan="6" style="text-align:center;color:#888;padding:12px">Cargando datos...</td></tr></tbody>
+      <thead><tr><th>#</th><th>Cliente</th><th>Completadas</th><th>Demoradas</th><th>Proporción</th></tr></thead>
+      <tbody id="tbodyCliDetalle"><tr><td colspan="5" style="text-align:center;color:#888;padding:12px">Cargando datos...</td></tr></tbody>
     </table>
   </div>
 </div>
@@ -385,8 +383,8 @@ tbody td{padding:8px 12px;border-bottom:1px solid #eee;vertical-align:middle}
     </div>
     <table id="tablaTaskas">
       <thead><tr>
-        <th>Unidad</th>
-        <th>Cliente / Destino</th>
+        <th>Cliente / Unidad</th>
+        <th>Destino</th>
         <th>Fecha</th>
         <th>Llegada</th>
         <th>Estado</th>
@@ -746,12 +744,10 @@ function _renderDatos(d) {
         const maxV = Math.max(...d.cliVals, 1);
         cliBody.innerHTML = d.cliLabels.map((lbl,i) => {
           const cnt = d.cliVals[i]||0;
-          const destino = (d.cliDestinos && d.cliDestinos[i]) || '—';
           const pct = Math.round(cnt/maxV*100);
           return `<tr style="background:${i%2===0?'#fafafa':'#fff'}">
             <td style="text-align:center">${i+1}</td>
             <td><b>${lbl}</b></td>
-            <td style="color:#555;font-size:12px">${destino}</td>
             <td style="text-align:center;color:#2E7D32;font-weight:bold">${cnt}</td>
             <td style="text-align:center;color:#E65100">—</td>
             <td><div style="background:#eee;border-radius:4px;height:12px;overflow:hidden"><div style="background:#C62828;width:${pct}%;height:100%"></div></div></td>
@@ -763,14 +759,13 @@ function _renderDatos(d) {
     // Rebuild unit ranking table (Productividad tab)
     const trBody = document.getElementById('tbodyUnitsRanking');
     if (trBody && d.unitLabels && d.unitLabels.length) {
-      const sorted = d.unitLabels.map((lbl,i) => ({lbl, cliente: (d.unitClientes && d.unitClientes[i]) || '—', done: d.unitDone[i]||0, delay: d.unitDelay[i]||0, pct: d.unitPct[i]||0, color: d.unitColors[i]||'#9E9E9E'}))
+      const sorted = d.unitLabels.map((lbl,i) => ({lbl, done: d.unitDone[i]||0, delay: d.unitDelay[i]||0, pct: d.unitPct[i]||0, color: d.unitColors[i]||'#9E9E9E'}))
         .sort((a,b) => b.done - a.done);
       trBody.innerHTML = sorted.map((u,i) => {
         const tot = u.done + u.delay;
         return '<tr style="background:' + (i%2===0?'#fafafa':'#fff') + '">'
           + '<td style="text-align:center;color:#888">' + (i+1) + '</td>'
           + '<td><b>' + u.lbl + '</b></td>'
-          + '<td style="color:#555;font-size:12px">' + u.cliente + '</td>'
           + '<td style="text-align:center;color:#2E7D32;font-weight:bold">' + u.done + '</td>'
           + '<td style="text-align:center;color:#E65100">' + u.delay + '</td>'
           + '<td style="text-align:center">' + tot + '</td>'
@@ -806,13 +801,12 @@ function _renderDatos(d) {
     // Rebuild unit cumplimiento table
     const ucBody = document.getElementById('tbodyCumplUnit');
     if (ucBody && d.unitLabels && d.unitLabels.length) {
-      const sorted2 = d.unitLabels.map((lbl,i) => ({lbl, cliente: (d.unitClientes && d.unitClientes[i]) || '—', done: d.unitDone[i]||0, delay: d.unitDelay[i]||0, pct: d.unitPct[i]||0, color: d.unitColors[i]||'#9E9E9E'}))
+      const sorted2 = d.unitLabels.map((lbl,i) => ({lbl, done: d.unitDone[i]||0, delay: d.unitDelay[i]||0, pct: d.unitPct[i]||0, color: d.unitColors[i]||'#9E9E9E'}))
         .sort((a,b) => b.pct - a.pct);
       ucBody.innerHTML = sorted2.map((u,i) => {
         const tot = u.done + u.delay;
         return '<tr style="background:' + (i%2===0?'#fafafa':'#fff') + '">'
           + '<td><b>' + u.lbl + '</b></td>'
-          + '<td style="color:#555;font-size:12px">' + u.cliente + '</td>'
           + '<td style="text-align:center;color:#2E7D32;font-weight:bold">' + u.done + '</td>'
           + '<td style="text-align:center;color:#E65100">' + u.delay + '</td>'
           + '<td style="text-align:center">' + tot + '</td>'
@@ -925,7 +919,7 @@ function _renderDatos(d) {
               : '<span style="color:#888">— Sin asignar</span>';
             html += '<tr style="background:'+(i%2===0?'#fafafa':'#fff')+'">'
               + '<td><b>'+t.label+'</b></td>'
-              + '<td><small>'+t.client+'</small></td>'
+              + '<td><small style="color:#555">'+(t.destino||'—')+'</small></td>'
               + '<td style="text-align:center;white-space:nowrap">'+t.date+'</td>'
               + '<td style="text-align:center">—</td>'
               + '<td>'+badge+'</td></tr>';
