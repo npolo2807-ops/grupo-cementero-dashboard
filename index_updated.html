@@ -659,6 +659,10 @@ fetch('datos.json')
   .catch(() => {});
 
 function _renderDatos(d) {
+    // Normalizar zoneNames: convertir códigos mayúsculas a display names
+    var CODE_TO_DISPLAY = {DAVID:'David',CHITRE:'Chitre',AGUADULCE:'Agua Dulce',TOCUMEN:'Tocumen',CHORRERA:'Chorrera'};
+    if (d.zoneNames) d.zoneNames = d.zoneNames.map(function(z){ return CODE_TO_DISPLAY[z] || z; });
+
     // Zone cards — solo 5 grupos válidos
     var zc = document.getElementById('zoneCardsContainer');
     if (zc && d.zoneNames && d.zoneNames.length) {
