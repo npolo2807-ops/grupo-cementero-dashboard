@@ -86,6 +86,11 @@ def tracker_tracks(tracker_id, from_str, to_str):
         speeds = [t['avg_speed'] for t in lst if t.get('avg_speed', 0) > 0]
         avg_speed = round(sum(speeds)/len(speeds)) if speeds else 0
         return {'km': km, 'trips': trips, 'avg_speed': avg_speed, 'hours': round(hours, 1)}
+    except requests.exceptions.HTTPError as e:
+        print(f'  GPS error tracker {tracker_id}: {e}')
+        try: print(f'  Response body: {e.response.text[:500]}')
+        except: pass
+        return None
     except Exception as e:
         print(f'  GPS error tracker {tracker_id}: {e}')
         return None
@@ -108,8 +113,8 @@ MES_PREFIX = today.strftime('%Y-%m')
 FECHA_ISO  = today.isoformat()
 FECHA_LARGA = f'{today.day} de {meses[today.month-1]} de {today.year}'
 PERIODO = f'1 {meses_corto[today.month-1]} – {today.day} {meses_corto[today.month-1]} {today.year}'
-from_str = f'{MES_PREFIX}-01T00:00:00'
-to_str   = f'{FECHA_ISO}T23:59:59'
+from_str = f'{MES_PREFIX}-01 00:00:00'
+to_str   = f'{FECHA_ISO} 23:59:59'
 
 print(f'Fecha: {FECHA_LARGA}  |  Período: {PERIODO}')
 
@@ -227,6 +232,7 @@ try:
         except Exception as e2:
             print(f'    -> error: {e2}')
         time.sleep(0.3)
+        break  # solo probar con el primer tracker para diagnóstico
     print(f'  GPS stats: {len(tracker_gps)} trackers con datos')
 except Exception as e:
     print(f'  Error listando trackers: {e}')
