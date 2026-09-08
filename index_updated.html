@@ -1133,13 +1133,163 @@ function filtrarTabla() {
 }
 function limpiarFiltros() { limpiarFiltroGlobal(); }
 
+// ── Constantes Navixy ─────────────────────────────────────────────────────────
+var NAVIXY_HASH = 'd720aae8e5c7f7c0aa1732f83d4b4371';
+var NAVIXY_URL  = 'https://api.navixy.com/v2';
+var TRACKER_ZONES_JS = {408346:'DAVID',1048369:'CHITRE',1051266:'AGUADULCE',1669379:'TOCUMEN'};
+var GEO_ZONES_JS = {
+  'david':'DAVID','chiriqui':'DAVID','chitre':'CHITRE','chitré':'CHITRE',
+  'aguadulce':'AGUADULCE','agua dulce':'AGUADULCE',
+  'tocumen':'TOCUMEN','chorrera':'CHORRERA','la chorrera':'CHORRERA',
+  'colon':'CHORRERA','colón':'CHORRERA','arraijan':'CHORRERA','arraiján':'CHORRERA',
+  'santiago':'CHITRE','divisa':'CHITRE','panama':'TOCUMEN','panamá':'TOCUMEN'
+};
+var ZONE_DISPLAY_JS = {DAVID:'David',CHITRE:'Chitre',AGUADULCE:'Agua Dulce',TOCUMEN:'Tocumen',CHORRERA:'Chorrera'};
+var ZONE_COLORS_JS  = {DAVID:'#F44336',TOCUMEN:'#FF9800',CHITRE:'#009688',CHORRERA:'#8BC34A',AGUADULCE:'#3F51B5'};
+var ZONE_ORDER_JS   = ['DAVID','CHITRE','AGUADULCE','TOCUMEN','CHORRERA'];
+
+function _getZoneJS(t, trackerLabels) {
+  var tid = t.tracker_id;
+  if (tid && TRACKER_ZONES_JS[tid]) return TRACKER_ZONES_JS[tid];
+  var loc = (t.location||{}).address||'';
+  var text = (loc + ' ' + (t.description||'') + ' ' + (t.label||'')).toLowerCase();
+  for (var kw in GEO_ZONES_JS) { if (text.indexOf(kw) >= 0) return GEO_ZONES_JS[kw]; }
+  return 'CHORRERA';
+}
+
+function _getDestinoJS(t) {
+  var addr = ((t.location||{}).address)||'';
+  if (addr.indexOf('//') >= 0) return addr.split('//')[0].trim();
+  return addr.trim();
+}
+
+function _procesarTareas(tasks, trackerMap) {
+  var zoneSt = {}, daySt = {}, unitSt = {}, cliSt = {}, trendSt = {};
+  var VALID = {DAVID:1,CHITRE:1,AGUADULCE:1,TOCUMEN:1,CHORRERA:1};
+
+  tasks.forEach(function(t) {
+    if (!t.tracker_id) return;
+    var z = _getZoneJS(t);
+    if (!zoneSt[z]) zoneSt[z] = {done:0,delayed:0,total:0};
+    zoneSt[z].total++;
+    if (t.status==='done') zoneSt[z].done++;
+    else if (t.status==='failed'||t.status==='delayed') zoneSt[z].delayed++;
+
+    var d = (t.from||'').slice(0,10);
+    if (d) daySt[d] = (daySt[d]||0)+1;
+
+    var tid = t.tracker_id;
+    var camion = (trackerMap && trackerMap[tid]) ? trackerMap[tid] : ('Tracker '+tid);
+    var cliente = (t.label||'Sin cliente').trim();
+    if (!unitSt[camion]) unitSt[camion] = {done:0,delayed:0,cliente:''};
+    unitSt[camion].cliente = cliente;
+    if (t.status==='done') unitSt[camion].done++;
+    else if (t.status==='failed'||t.status==='delayed') unitSt[camion].delayed++;
+
+    var cli = cliente||'Sin cliente';
+    var destino = _getDestinoJS(t);
+    if (!cliSt[cli]) cliSt[cli] = {count:0,destino:''};
+    cliSt[cli].count++;
+    if (!cliSt[cli].destino && destino) cliSt[cli].destino = destino;
+
+    var dk = d.slice(0,10);
+    if (!trendSt[dk]) trendSt[dk] = {done:0,delay:0,unass:0};
+    if (t.status==='done') trendSt[dk].done++;
+    else if (t.status==='failed'||t.status==='delayed') trendSt[dk].delay++;
+    else trendSt[dk].unass++;
+  });
+
+  var activeTasks = tasks.filter(function(t){ return !!t.tracker_id; });
+  var total=activeTasks.length, done=0, delayed=0;
+  activeTasks.forEach(function(t){
+    if(t.status==='done') done++;
+    else if(t.status==='failed'||t.status==='delayed') delayed++;
+  });
+  var pct = total>0 ? Math.round(done/total*100) : 0;
+
+  var sortedZones = ZONE_ORDER_JS.filter(function(z){ return zoneSt[z]; });
+  var sortedUnits = Object.keys(unitSt).sort(function(a,b){ return (unitSt[b].done+unitSt[b].delayed)-(unitSt[a].done+unitSt[a].delayed); }).slice(0,15);
+  var sortedCli   = Object.keys(cliSt).sort(function(a,b){ return cliSt[b].count-cliSt[a].count; }).slice(0,12);
+  var sortedDays  = Object.keys(daySt).sort();
+  var sortedTrend = Object.keys(trendSt).sort();
+
+  function uPct(u){ var tot=unitSt[u].done+unitSt[u].delayed; return tot>0?Math.round(unitSt[u].done/tot*100):0; }
+  function uCol(p){ return p>=90?'#8BC34A':p>=70?'#FF9800':p>=50?'#E65100':'#C62828'; }
+
+  var taskListData = activeTasks.map(function(t){
+    var gz = _getZoneJS(t);
+    return {
+      label: t.label||'Sin asignar',
+      destino: _getDestinoJS(t),
+      date: (t.from||'').slice(0,10),
+      status: t.status,
+      zone: ZONE_DISPLAY_JS[gz]||gz,
+      color: ZONE_COLORS_JS[gz]||'#9E9E9E',
+      lat: ((t.location||{}).lat)||0,
+      lng: ((t.location||{}).lng)||0,
+    };
+  });
+
+  return {
+    kpi: {total:total,done:done,delayed:delayed,pct:pct,units:Object.keys(unitSt).length},
+    zoneNames:  sortedZones.map(function(z){ return ZONE_DISPLAY_JS[z]||z; }),
+    zoneDone:   sortedZones.map(function(z){ return zoneSt[z].done; }),
+    zoneDelay:  sortedZones.map(function(z){ return zoneSt[z].delayed; }),
+    zoneColors: sortedZones.map(function(z){ return ZONE_COLORS_JS[z]||'#9E9E9E'; }),
+    unitLabels:   sortedUnits,
+    unitClientes: sortedUnits.map(function(u){ return unitSt[u].cliente; }),
+    unitDone:     sortedUnits.map(function(u){ return unitSt[u].done; }),
+    unitDelay:    sortedUnits.map(function(u){ return unitSt[u].delayed; }),
+    unitPct:      sortedUnits.map(function(u){ return uPct(u); }),
+    unitColors:   sortedUnits.map(function(u){ return uCol(uPct(u)); }),
+    cliLabels:    sortedCli,
+    cliDestinos:  sortedCli.map(function(c){ return cliSt[c].destino; }),
+    cliVals:      sortedCli.map(function(c){ return cliSt[c].count; }),
+    diasLabels:   sortedDays.map(function(d){ return d.slice(5); }),
+    diasVals:     sortedDays.map(function(d){ return daySt[d]; }),
+    trendLabels:  sortedTrend.map(function(d){ return d.slice(5); }),
+    trendDone:    sortedTrend.map(function(d){ return trendSt[d].done; }),
+    trendDelay:   sortedTrend.map(function(d){ return trendSt[d].delay; }),
+    trendUnass:   sortedTrend.map(function(d){ return trendSt[d].unass; }),
+    taskList: taskListData,
+    gpsStats: window._datosRaw ? window._datosRaw.gpsStats : {},
+  };
+}
+
+async function _fetchNavixyTareas(desde, hasta) {
+  var fromStr = desde + ' 00:00:00';
+  var toStr   = hasta + ' 23:59:59';
+
+  // 1. Fetch tracker list for camión names
+  var trackerMap = {};
+  try {
+    var tr = await fetch(NAVIXY_URL+'/tracker/list?hash='+NAVIXY_HASH);
+    var trData = await tr.json();
+    (trData.list||[]).forEach(function(tk){ trackerMap[tk.id] = tk.label||String(tk.id); });
+  } catch(e) { console.warn('tracker list error:', e); }
+
+  // 2. Fetch all tasks paginated
+  var allTasks = [];
+  var countResp = await fetch(NAVIXY_URL+'/task/list?hash='+NAVIXY_HASH+'&limit=1&offset=0&from='+encodeURIComponent(fromStr)+'&to='+encodeURIComponent(toStr));
+  var countData = await countResp.json();
+  var total = countData.count||0;
+  var batches = Math.ceil(total/100);
+  for (var i=0; i<batches; i++) {
+    var resp = await fetch(NAVIXY_URL+'/task/list?hash='+NAVIXY_HASH+'&limit=100&offset='+(i*100)+'&from='+encodeURIComponent(fromStr)+'&to='+encodeURIComponent(toStr));
+    var data = await resp.json();
+    (data.list||[]).forEach(function(t){ allTasks.push(t); });
+  }
+
+  return _procesarTareas(allTasks, trackerMap);
+}
+
 function aplicarFiltroGlobal() {
   var d = window._datosRaw;
   if (!d) return;
   var desde = (document.getElementById('gDesde')||{}).value || '';
   var hasta = (document.getElementById('gHasta')||{}).value || '';
 
-  // If no filter, render raw data
+  // Sin filtro → mostrar datos del día
   if (!desde && !hasta) {
     var ctr = document.getElementById('gContador');
     if (ctr) ctr.textContent = '';
@@ -1147,84 +1297,25 @@ function aplicarFiltroGlobal() {
     return;
   }
 
-  // Filter taskList by date
-  var tasks = (d.taskList||[]).filter(function(t) {
-    var dt = t.date || '';
-    return (!desde || dt >= desde) && (!hasta || dt <= hasta);
-  });
-  var ctr = document.getElementById('gContador');
-  if (ctr) ctr.textContent = tasks.length + ' tareas en el período';
+  // Con fechas → llamar Navixy en vivo
+  var btn = document.getElementById('btnAplicar');
+  if (btn) { btn.textContent = '⏳ Consultando Navixy...'; btn.style.background = '#888'; btn.disabled = true; }
 
-  // Recompute KPIs
-  var total = tasks.length, done = 0, delayed = 0;
-  var units = {};
-  tasks.forEach(function(t) {
-    if (t.status === 'done') done++;
-    else if (t.status === 'delayed') delayed++;
-    if (t.label) units[t.label] = true;
+  _fetchNavixyTareas(desde, hasta).then(function(fd) {
+    fd.periodo = desde + ' → ' + hasta;
+    fd.fecha   = desde + ' al ' + hasta;
+    var ctr = document.getElementById('gContador');
+    if (ctr) ctr.textContent = fd.kpi.total + ' tareas en el período';
+    _renderDatos(fd);
+    var fd2 = document.getElementById('filtroDesde'); if(fd2) fd2.value = desde;
+    var fh2 = document.getElementById('filtroHasta'); if(fh2) fh2.value = hasta;
+    filtrarTabla();
+    if (btn) { btn.textContent = '✅ Filtro aplicado'; btn.style.background = '#2E7D32'; btn.disabled = false; }
+    setTimeout(function(){ if(btn){ btn.textContent='🔍 Aplicar filtro'; btn.style.background='#C62828'; } }, 2000);
+  }).catch(function(err) {
+    console.error('Navixy fetch error:', err);
+    if (btn) { btn.textContent = '❌ Error - reintenta'; btn.style.background = '#C62828'; btn.disabled = false; }
   });
-  var pct = total > 0 ? Math.round(done/total*100) : 0;
-
-  // Recompute zone stats
-  var zones = {};
-  tasks.forEach(function(t) {
-    var z = t.zone || 'Sin zona';
-    if (!zones[z]) zones[z] = {done:0,delay:0,color:''};
-    if (t.status==='done') zones[z].done++;
-    else if (t.status==='delayed') zones[z].delay++;
-    if (t.color) zones[z].color = t.color;
-  });
-
-  // Recompute unit (destination) stats
-  var unitMap = {};
-  tasks.forEach(function(t) {
-    var lbl = t.label || 'Sin asignar';
-    if (!unitMap[lbl]) unitMap[lbl] = {done:0,delay:0,color:t.color||'#9E9E9E'};
-    if (t.status==='done') unitMap[lbl].done++;
-    else if (t.status==='delayed') unitMap[lbl].delay++;
-  });
-  var sortedUnits = Object.keys(unitMap).sort(function(a,b){ return unitMap[b].done - unitMap[a].done; }).slice(0,15);
-
-  // Recompute trend (group by week label from date)
-  var trendMap = {};
-  tasks.forEach(function(t) {
-    if (!t.date) return;
-    var wk = t.date.slice(0,7); // YYYY-MM grouping
-    if (!trendMap[wk]) trendMap[wk] = {done:0,delay:0,unass:0};
-    if (t.status==='done') trendMap[wk].done++;
-    else if (t.status==='delayed') trendMap[wk].delay++;
-    else trendMap[wk].unass++;
-  });
-  var trendKeys = Object.keys(trendMap).sort();
-
-  // Build filtered data object
-  var zoneNames2 = Object.keys(zones).sort();
-  var fd = {
-    kpi: { total:total, done:done, delayed:delayed, units:Object.keys(units).length, pct:pct },
-    zoneNames: zoneNames2,
-    zoneDone:  zoneNames2.map(function(z){ return zones[z].done; }),
-    zoneDelay: zoneNames2.map(function(z){ return zones[z].delay; }),
-    zoneColors: zoneNames2.map(function(z){ return zones[z].color || '#9E9E9E'; }),
-    unitLabels: sortedUnits,
-    unitDone:   sortedUnits.map(function(u){ return unitMap[u].done; }),
-    unitDelay:  sortedUnits.map(function(u){ return unitMap[u].delay; }),
-    unitPct:    sortedUnits.map(function(u){ var tot=unitMap[u].done+unitMap[u].delay; return tot>0?Math.round(unitMap[u].done/tot*100):0; }),
-    unitColors: sortedUnits.map(function(u,i){ return 'hsl('+(10+i*8)+',60%,45%)'; }),
-    trendLabels: trendKeys,
-    trendDone:   trendKeys.map(function(k){ return trendMap[k].done; }),
-    trendDelay:  trendKeys.map(function(k){ return trendMap[k].delay; }),
-    trendUnass:  trendKeys.map(function(k){ return trendMap[k].unass; }),
-    diasLabels: d.diasLabels, diasVals: d.diasVals, // keep original day-of-week
-    cliLabels: d.cliLabels, cliVals: d.cliVals, cliDestinos: d.cliDestinos,
-    taskList: tasks,
-    gpsStats: d.gpsStats,
-    periodo: (desde || '…') + ' → ' + (hasta || '…')
-  };
-  _renderDatos(fd);
-  // Sync local table filters with global date range
-  var fd2 = document.getElementById('filtroDesde'); if(fd2) fd2.value = desde;
-  var fh2 = document.getElementById('filtroHasta'); if(fh2) fh2.value = hasta;
-  filtrarTabla();
 }
 
 function limpiarFiltroGlobal() {
@@ -1241,22 +1332,14 @@ function btnAplicarClick() {
   var gh = document.getElementById('gHasta');
   if (gd && _rangoStart) gd.value = _rangoStart;
   if (gh && _rangoEnd)   gh.value = _rangoEnd;
-
-  var btn = document.getElementById('btnAplicar');
-  if (btn) { btn.textContent = '⏳ Buscando...'; btn.style.background = '#888'; btn.disabled = true; }
-  setTimeout(function() {
-    aplicarFiltroGlobal();
-    actualizarBotonRango();
-    // Close picker
-    var p = document.getElementById('rangoPicker');
-    if (p) p.style.display = 'none';
-    var arr = document.getElementById('btnRangoArrow');
-    if (arr) arr.textContent = '▾';
-    if (btn) { btn.textContent = '✅ Filtro aplicado'; btn.style.background = '#2E7D32'; btn.disabled = false; }
-    setTimeout(function() {
-      if (btn) { btn.textContent = '🔍 Aplicar filtro'; btn.style.background = '#C62828'; }
-    }, 2000);
-  }, 400);
+  // Close picker
+  var p = document.getElementById('rangoPicker');
+  if (p) p.style.display = 'none';
+  var arr = document.getElementById('btnRangoArrow');
+  if (arr) arr.textContent = '▾';
+  actualizarBotonRango();
+  // aplicarFiltroGlobal maneja el spinner y el fetch a Navixy
+  aplicarFiltroGlobal();
 }
 
 // ── CALENDAR DATE RANGE PICKER ─────────────────────────────────────────────
