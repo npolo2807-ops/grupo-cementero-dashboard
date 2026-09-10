@@ -873,7 +873,7 @@ function _renderDatos(d) {
             + '<td style="text-align:center;font-weight:600">' + g.trips + '</td>'
             + '<td style="text-align:center">' + g.avg_speed + ' km/h</td>'
             + '<td style="text-align:center">' + g.hours + ' h</td>'
-            + nd  // Ralentí: requiere reporte adicional de Navixy
+            + '<td style="text-align:center;color:#aaa;font-size:12px">N/D</td>'
             + '</tr>';
         }).join('');
       } else {
@@ -883,7 +883,7 @@ function _renderDatos(d) {
 
     // Rebuild tareas table + map markers from taskList
     if (d.taskList && d.taskList.length) {
-      var ZCOLORS = {DAVID:'#F44336',TOCUMEN:'#FF9800',CHITRE:'#009688',CHORRERA:'#8BC34A',AGUADULCE:'#3F51B5',COLON:'#9C27B0',ARRAIJAN:'#795548',SANTIAGO:'#607D8B',DIVISA:'#FF5722'};
+      var ZCOLORS = {DAVID:'#F44336',TOCUMEN:'#FF9800',CHITRE:'#009688',CHORRERA:'#8BC34A',AGUADULCE:'#3F51B5'};
       // Populate mapPoints for Leaflet
       mapPoints.length = 0;
       d.taskList.forEach(function(t) {
@@ -930,6 +930,9 @@ function _renderDatos(d) {
     }
 
 
+  // Actualizar ralentiData desde gpsStats del día
+  if (d.gpsStats) _buildRalentiFromGps(d.gpsStats);
+
 } // end _renderDatos
 
 // ── MAPA LEAFLET ─────────────────────────────────────────────────────────────
@@ -974,9 +977,20 @@ function initMap() {
 }
 
 // ── MODAL RALENTÍ ────────────────────────────────────────────────────────────
-const ralentiData  = [{"label": "Serrano DAVID", "zone": "DAVID", "zcolor": "#F44336", "idle_h": 434.0, "trip_h": 22.0, "pct_idle": 95.2, "alert": true}, {"label": "CHITRE AUX", "zone": "CHITRE", "zcolor": "#009688", "idle_h": 426.9, "trip_h": 29.1, "pct_idle": 93.6, "alert": true}, {"label": "Celso Marin AH9975", "zone": "CHORRERA", "zcolor": "#8BC34A", "idle_h": 426.0, "trip_h": 28.9, "pct_idle": 93.6, "alert": true}, {"label": "Plataforma Aguadulce", "zone": "AGUADULCE", "zcolor": "#3F51B5", "idle_h": 417.0, "trip_h": 39.0, "pct_idle": 91.4, "alert": true}, {"label": "Foton EN8424 E.Herrera", "zone": "CHORRERA", "zcolor": "#8BC34A", "idle_h": 414.9, "trip_h": 41.1, "pct_idle": 91.0, "alert": true}, {"label": "Foton EN8426 J.L\u00f3pez", "zone": "CHORRERA", "zcolor": "#8BC34A", "idle_h": 409.0, "trip_h": 47.0, "pct_idle": 89.7, "alert": true}, {"label": "Enrique Corro", "zone": "CHORRERA", "zcolor": "#8BC34A", "idle_h": 407.1, "trip_h": 48.9, "pct_idle": 89.3, "alert": true}, {"label": "Jorge Aguilar AJ2549", "zone": "CHORRERA", "zcolor": "#8BC34A", "idle_h": 406.4, "trip_h": 49.6, "pct_idle": 89.1, "alert": true}, {"label": "Amarilla 446527", "zone": "CHORRERA", "zcolor": "#8BC34A", "idle_h": 405.2, "trip_h": 50.8, "pct_idle": 88.9, "alert": true}, {"label": "Foton EN8468 J.Abel", "zone": "CHORRERA", "zcolor": "#8BC34A", "idle_h": 403.9, "trip_h": 52.1, "pct_idle": 88.6, "alert": true}, {"label": "Inter Azul CU4994", "zone": "CHORRERA", "zcolor": "#8BC34A", "idle_h": 402.3, "trip_h": 53.7, "pct_idle": 88.2, "alert": true}, {"label": "Carlos Carri\u00f3n", "zone": "CHORRERA", "zcolor": "#8BC34A", "idle_h": 392.4, "trip_h": 63.6, "pct_idle": 86.1, "alert": true}, {"label": "Tocumen 295286", "zone": "TOCUMEN", "zcolor": "#FF9800", "idle_h": 391.9, "trip_h": 64.1, "pct_idle": 85.9, "alert": true}, {"label": "AN4246 Plataforma 1", "zone": "TOCUMEN", "zcolor": "#FF9800", "idle_h": 389.6, "trip_h": 65.9, "pct_idle": 85.5, "alert": true}, {"label": "Foton EN8423 E.Medina", "zone": "CHORRERA", "zcolor": "#8BC34A", "idle_h": 381.3, "trip_h": 74.7, "pct_idle": 83.6, "alert": true}, {"label": "Manuel Murada", "zone": "CHORRERA", "zcolor": "#8BC34A", "idle_h": 368.6, "trip_h": 87.4, "pct_idle": 80.8, "alert": true}, {"label": "Angel De Gracia", "zone": "CHORRERA", "zcolor": "#8BC34A", "idle_h": 0.0, "trip_h": 0.0, "pct_idle": 0, "alert": false}];
-const ralentiZones = [{"name": "DAVID", "color": "#F44336", "idle_h": 434.0, "trip_h": 22.0, "pct": 95.2}, {"name": "TOCUMEN", "color": "#FF9800", "idle_h": 781.6, "trip_h": 130.0, "pct": 85.7}, {"name": "CHITRE", "color": "#009688", "idle_h": 426.9, "trip_h": 29.1, "pct": 93.6}, {"name": "CHORRERA", "color": "#8BC34A", "idle_h": 4417.3, "trip_h": 597.6, "pct": 88.1}, {"name": "AGUADULCE", "color": "#3F51B5", "idle_h": 417.0, "trip_h": 39.0, "pct": 91.4}];
+var ralentiData  = [];
+var ralentiZones = [];
 let _ralentiChartBuilt = false;
+
+function _buildRalentiFromGps(gpsStats) {
+  var entries = Object.entries(gpsStats || {}).sort(function(a,b){ return b[1].km - a[1].km; });
+  ralentiData = entries.map(function(e) {
+    var g = e[1];
+    return { label: e[0].replace(/\s*\*\s*$/, '').trim(), zone: 'N/A', zcolor: '#9E9E9E',
+             idle_h: 0, trip_h: g.hours || 0, pct_idle: 0, alert: false };
+  });
+  ralentiZones = [];
+  _ralentiChartBuilt = false;
+}
 
 function buildCumplPane() {
   if (window._cumplBuilt) return;
