@@ -101,9 +101,15 @@ def task_list(offset, limit=100, from_str=None, to_str=None):
     url = f'{NAVIXY_URL}/task/list?hash={NAVIXY_HASH}&limit={limit}&offset={offset}'
     if from_str: url += f'&from={from_str}'
     if to_str:   url += f'&to={to_str}'
-    r = requests.get(url, timeout=30)
-    r.raise_for_status()
-    return r.json()
+    for intento in range(3):
+        try:
+            r = requests.get(url, timeout=45)
+            r.raise_for_status()
+            return r.json()
+        except Exception as e:
+            print(f'  task_list intento {intento+1}/3 fallido: {e}')
+            if intento < 2: time.sleep(5)
+    raise Exception(f'task_list falló 3 veces en offset={offset}')
 
 def tracker_tracks(tracker_id, from_str, to_str):
     """Fetch track list summary for a tracker. Returns total km, trips, hours."""
@@ -120,14 +126,17 @@ def tracker_tracks(tracker_id, from_str, to_str):
         total = data.get('total', {})
         km = round(total.get('length', 0), 1)
         trips = total.get('count', 0)
-        # trip_duration is ISO 8601 duration like PT44H56M14S
+        # trip_duration = horas en movimiento
         dur_str = total.get('trip_duration', 'PT0S')
         hours = _parse_iso_duration_hours(dur_str)
+        # parking_duration = ralentí (motor encendido, vehículo detenido)
+        idle_str = total.get('parking_duration', 'PT0S')
+        idle_hours = _parse_iso_duration_hours(idle_str)
         # avg speed from trips
         lst = data.get('list', [])
         speeds = [t['avg_speed'] for t in lst if t.get('avg_speed', 0) > 0]
         avg_speed = round(sum(speeds)/len(speeds)) if speeds else 0
-        return {'km': km, 'trips': trips, 'avg_speed': avg_speed, 'hours': round(hours, 1)}
+        return {'km': km, 'trips': trips, 'avg_speed': avg_speed, 'hours': round(hours, 1), 'idle_h': round(idle_hours, 1)}
     except requests.exceptions.HTTPError as e:
         print(f'  GPS error tracker {tracker_id}: {e}')
         try: print(f'  Response body: {e.response.text[:500]}')
