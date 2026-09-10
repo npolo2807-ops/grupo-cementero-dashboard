@@ -2,8 +2,9 @@ name: Actualizar Dashboard Grupo Cementero
 
 on:
   schedule:
+    # Corre todos los días a las 11:50 UTC ≈ 6:50 AM Panamá (UTC-5)
     - cron: '50 11 * * *'
-  workflow_dispatch:
+  workflow_dispatch:   # permite correrlo manualmente desde GitHub
 
 jobs:
   actualizar:
@@ -24,11 +25,25 @@ jobs:
         run: pip install requests
 
       - name: Generar datos.json
+        id: generar
         env:
-          NAVIXY_HASH: ${{ secrets.NAVIXY_HASH }}
+          NAVIXY_HASH:    ${{ secrets.NAVIXY_HASH }}
+          GMAIL_USER:     ${{ secrets.GMAIL_USER }}
+          GMAIL_APP_PASS: ${{ secrets.GMAIL_APP_PASS }}
+          EMAIL_CC:       npolo2807@gmail.com
         run: python scripts/generar_datos.py
 
+      - name: Commit y push datos.json
+        if: success()
+        run: |
+          git config user.name  "Dashboard Bot"
+          git config user.email "bot@npgservices.com"
+          git add datos.json
+          git commit -m "datos: actualización diaria $(date -u '+%Y-%m-%d %H:%M')" || echo "Sin cambios"
+          git push || echo "Nada que pushear"
+
       - name: Enviar email de resumen
+        if: success()
         env:
           GMAIL_USER:     ${{ secrets.GMAIL_USER }}
           GMAIL_APP_PASS: ${{ secrets.GMAIL_APP_PASS }}
@@ -36,10 +51,11 @@ jobs:
           EMAIL_CC:       npolo2807@gmail.com
         run: python scripts/enviar_email.py
 
-      - name: Commit y push datos.json
-        run: |
-          git config user.name  "Dashboard Bot"
-          git config user.email "bot@npgservices.com"
-          git add datos.json
-                    git commit -m "datos: actualizacion diaria $(date -u '+%Y-%m-%d %H:%M')" || echo "Sin cambios"
-          git push || echo "Nada que pushear"
+      - name: Alerta si falló algo
+        if: failure()
+        env:
+          GMAIL_USER:     ${{ secrets.GMAIL_USER }}
+          GMAIL_APP_PASS: ${{ secrets.GMAIL_APP_PASS }}
+          EMAIL_CC:       npolo2807@gmail.com
+          GITHUB_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: python scripts/alerta_error.py
