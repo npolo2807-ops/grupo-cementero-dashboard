@@ -671,7 +671,7 @@ function _renderDatos(d) {
         var done = d.zoneDone[i]||0, delay = d.zoneDelay[i]||0;
         var tot = done + delay + 0;
         // total includes unassigned — use full count from datos if available
-        var totalReal = (d.zoneTotal && d.zoneTotal[i]) ? d.zoneTotal[i] : tot;
+        var totalReal = (d.zoneTotals && d.zoneTotals[i]) ? d.zoneTotals[i] : tot;
         var pct = totalReal > 0 ? Math.round(done/totalReal*100) : 0;
         var col = ZONE_COL[z] || '#9E9E9E';
         return '<div class="zone-card" style="border-left:5px solid '+col+'">'
